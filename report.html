@@ -1,0 +1,18 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
+<head>
+    <meta charset="UTF-8"/>
+    <title>ah12819 report</title>
+</head>
+
+<body>
+    <p>The site has two pages, the main page and the library page</p>
+    <p>My website is for the University of Bristol Tolkien Society, who kindly the photographs used in the website. I have cropped and scaled most (if not all) of the photographs but otherwise have not edited them. The Twitter, UBU and Facebook icons all came from their respective websites' branding sections.</p>
+    <p>The logo was created from <a href="./original-logo.jpg">this</a> hand-drawn logo that already existed before I started this project, created by the society's president. I used inkscape's bezier tool to trace the lines before elongating the dragon to make it more suited to a banner, resulting in <a href="./smag-long-plain.svg">this svg</a>. I had originally tried using the trace tool, but this led to far too many nodes and rather than being lines the traces were volumes, which made tweaking the shape harder. I then used inkscape to create a scale pattern for gimp, the original svg for which is <a href="./scales.svg">here</a> (It will not show in browser as it is outside the "document" area). I used this pattern to give the dragon more colour and added the wings gradients and the fire in gimp (the .xcf for which can be found <a href="./smag.xcf">here</a>.</p>
+    <p>I also created the tick and cross icons used in the library page in inkscape.</p>
+    <p>The book objects in library.js is intended to be replaced with a server-side database for part two of the assignment. They are only there to demonstrate the functionality of the rest of the script.</p>
+    <p>The gradient used in the spacers was generated using the tool found <a href="http://www.colorzilla.com/gradient-editor/">here</a>.</p>
+    <p> I have tested my site on SAFE, on my local machine using server.js and a different webserver. At first the gallery with fading images would, the first time an image loaded, start to fade the old image back in before switching to the new one, this error only being visible when using a remote server as a local one could load the images much faster. I fixed this by forcing the browser to fetch the images before it started the first fade loop.</p>
+    <p>I have tested my site on IE, chrome and firefox. On older versions of IE the layout is <em>sometimes</em> altered, with the icons for Facebook, Twitter and UBU being forced below the dargon logo, knocking the divs in the grey bar out of place. Additionally, I could not prevent the default behaviour of submitting the form on the library page from happening, despite using <code>eventpreventDefault()</code> and <code>event.returnValue=false</code>, in older versions of IE.</p>
+
+</body>
+</html>

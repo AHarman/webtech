@@ -1,0 +1,127 @@
+body {
+    min-width: 925px;
+}
+
+#main-section p {
+    padding-left: 2em;
+    padding-right:2em;
+}
+
+#form-container {
+    height: 250px;
+    margin-top: 50px;
+}
+
+#advanced-search {
+    padding-left: 2em;
+    padding-right:1em;
+    display: inline-block;
+    margin-right: auto;
+    margin-left: auto;
+    width: 50%;
+    height: 100%;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+label {
+    float: right;
+    padding-right: 1em;
+    font-weight: bold;
+}
+
+tr > td{
+    padding-bottom: 4px;
+}
+
+td > *{
+    vertical-align: middle;
+}
+
+#submitcell {
+    padding-top: 20px;
+    text-align: center;
+}
+
+#submitform {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+#books {
+    display: inline-block;
+    max-height:100%;
+    max-width: 40%;
+    margin-right: auto;
+    margin-left: auto;
+    vertical-align: top;
+}
+
+#results-container {
+    width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+ }
+
+#results-table {
+    width: 90%;
+    padding: 1em;
+    margin-top: 20px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.results-header {
+    font-weight: bold;
+    text-align: center;
+}
+
+.parity0 {
+    background-color: #FF9999;
+}
+
+.leftalign {
+    text-align: left;
+}
+
+.checkcell input {
+    margin-right: 10px;
+    margin-left: 5px;
+}
+
+.titlecell {
+    /*width: 40%;*/
+}
+
+.illustratedcell {
+    text-align: center;
+}
+
+.copiescell {
+    text-align: center;
+}
+
+.freecell {
+    text-align: center;
+}
+
+.icon {
+    height: 1em;
+    width: 1em;
+    margin-left:  auto;
+    margin-right: auto;
+}
+
+.submitrow {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+#email {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
