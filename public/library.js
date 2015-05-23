@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 //In the future, this will use a server-side database. This is just to test the page layout for results.
 //Missing data and not well researched (e.g hobbit pub. date is for first version, not the revised)
