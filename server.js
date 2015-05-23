@@ -20,23 +20,7 @@ var types = {
     '.css'  : 'text/css',
     '.js'   : 'application/javascript',
     '.png'  : 'image/png',
-    '.mp3'  : 'audio/mpeg', // audio
-    '.aac'  : 'audio/aac',  // audio
-    '.mp4'  : 'video/mp4',  // video
-    '.webm' : 'video/webm', // video
-    '.gif'  : 'image/gif',  // only if imported unchanged
-    '.jpeg' : 'image/jpeg', // only if imported unchanged
-    '.svg'  : 'image/svg+xml',
-    '.json' : 'application/json',
-    '.pdf'  : 'application/pdf',
-    '.txt'  : 'text/plain', // plain text only
-    '.xhtml': '#not suitable for dual delivery, use .html',
-    '.htm'  : '#proprietary, non-standard, use .html',
-    '.jpg'  : '#common but non-standard, use .jpeg',
-    '.rar'  : '#proprietary, non-standard, platform dependent, use .zip',
-    '.doc'  : '#proprietary, non-standard, platform dependent, ' +
-              'closed source, unstable over versions and installations, ' +
-              'contains unsharable personal and printer preferences, use .pdf',
+    '.jpg'  : 'image/jpg',
 };
 
 // Start both the http and https services.  Requests can only come from
@@ -55,18 +39,19 @@ function start() {
 // Print out the server addresses.
 function printAddresses() {
     var httpAddress = "http://localhost";
-    if (ports[0] != 80) httpAddress += ":" + ports[0];
+    if (ports[0] != 80)
+    {
+        httpAddress += ":" + ports[0];
+    }
     httpAddress += "/";
     var httpsAddress = "https://localhost";
-    if (ports[1] != 443) httpsAddress += ":" + ports[1];
+    if (ports[1] != 443)
+    {
+        httpsAddress += ":" + ports[1];
+    }
     httpsAddress += "/";
     console.log('Server running at', httpAddress, 'and', httpsAddress);
 }
-
-// All URLs other than / start with a randomly chosen prefix /site-x so the
-// site is forced to use relative links, and can then be published anywhere.
-var letter = "abcdefghijklmnopqrstuvwxyz".charAt(Math.floor(Math.random()*26));
-var prefix = "/site-" + letter;
 
 // Response codes: see http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 var OK = 200, Redirect = 307, NotFound = 404, BadType = 415, Error = 500;
@@ -92,6 +77,16 @@ function fail(response, code) {
     response.end();
 }
 
+function isImage(type) {
+    switch(type) {
+        case "image/png":
+        case "image/jpg":
+            return true;
+        default:
+            return false;
+    }
+}
+
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
 // that every URL should start with the prefix.  A URL ending with / is treated
 // as a folder and index.html is added.  A file name without an extension is
@@ -100,16 +95,49 @@ function fail(response, code) {
 // browser to get relative links right).
 function serve(request, response) {
     var file = request.url;
-    if (file == '/') return redirect(response, prefix + '/');
-    if (! starts(file,prefix)) return fail(response, NotFound);
-    file = file.substring(prefix.length);
-    if (ends(file,'/')) file = file + 'index.html';
-    file = "." + file;
+    console.log(file);
+
+    if (file == '/')
+        file = file + 'index.html'
+
     var type = findType(request, path.extname(file));
-    if (! type) return fail(response, BadType);
-    if (! inSite(file)) return fail(response, NotFound);
-    if (! matchCase(file)) return fail(response, NotFound);
-    if (! noSpaces(file)) return fail(response, NotFound);
+    console.log(type);
+    if (! type)
+    {
+        console.log("Fail 3");
+        console.log(file);
+        return fail(response, BadType);
+    }
+    else if (isImage(type))
+    {
+        console.log("Got an image");
+        file = '/images' + file;
+    }
+
+    if (starts(file,'/'))
+        file = '/public' + file;
+
+    file = "." + file;
+    
+    if (! inSite(file)) 
+    {
+        console.log("Fail 4");
+        console.log(file);
+        return fail(response, NotFound);
+    }
+    
+    if (! matchCase(file))
+    {
+        return fail(response, NotFound);
+    }
+    
+    if (! noSpaces(file)) 
+    {
+        console.log("Fail 5");
+        console.log(file);
+        return fail(response, NotFound);
+    }
+
     try { fs.readFile(file, ready); }
     catch (err) { return fail(response, Error); }
 
@@ -123,11 +151,17 @@ function serve(request, response) {
 // Content negotiation is used for XHTML delivery to new/old browsers.
 function findType(request, extension) {
     var type = types[extension];
-    if (! type) return type;
-    if (extension != ".html") return type;
+    if (! type) 
+        return type;
+    if (extension != ".html") 
+        return type;
+
     var htmlTypes = types[".html"].split(", ");
     var accepts = request.headers['accept'].split(",");
-    if (accepts.indexOf(htmlTypes[1]) >= 0) return htmlTypes[1];
+    
+    if (accepts.indexOf(htmlTypes[1]) >= 0) 
+        return htmlTypes[1];
+
     return htmlTypes[0];
 }
 
@@ -168,13 +202,26 @@ function noSpaces(name) {
 
 // Do a few tests.
 function test() {
-    if (! fs.existsSync('./index.html')) failTest('no index.html page found');
-    if (! inSite('./index.html')) failTest('inSite failure 1');
-    if (inSite('./../site')) failTest('inSite failure 2');
-    if (! matchCase('./index.html')) failTest('matchCase failure');
-    if (matchCase('./Index.html')) failTest('matchCase failure');
-    if (! noSpaces('./index.html')) failTest('noSpaces failure');
-    if (noSpaces('./my index.html')) failTest('noSpaces failure');
+    if (! fs.existsSync('./public/index.html'))
+        failTest('no index.html page found');
+
+    if (! inSite('./public/index.html'))
+        failTest('inSite failure 1');
+
+    if (inSite('./../site'))
+        failTest('inSite failure 2');
+
+    if (! matchCase('./public/index.html'))
+        failTest('matchCase failure');
+
+    if (matchCase('./public/Index.html'))
+        failTest('matchCase failure');
+
+    if (! noSpaces('./public/index.html'))
+        failTest('noSpaces failure');
+
+    if (noSpaces('./public/my index.html'))
+        failTest('noSpaces failure');
 }
 
 function failTest(s) {
