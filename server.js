@@ -8,6 +8,8 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var path = require('path');
+var sql = require("sqlite3").verbose();
+var db = new sql.Database("private/tolkien.sql", sqlite3.OPEN_READWRITE);
 
 // The default port numbers are the standard ones [80,443] for convenience.
 // Change them to e.g. [8080,8443] to avoid privilege or clash problems.
@@ -33,24 +35,6 @@ function start() {
     var options = { key: key, cert: cert };
     var httpsService = https.createServer(options, serve);
     httpsService.listen(ports[1], 'localhost');
-    printAddresses();
-}
-
-// Print out the server addresses.
-function printAddresses() {
-    var httpAddress = "http://localhost";
-    if (ports[0] != 80)
-    {
-        httpAddress += ":" + ports[0];
-    }
-    httpAddress += "/";
-    var httpsAddress = "https://localhost";
-    if (ports[1] != 443)
-    {
-        httpsAddress += ":" + ports[1];
-    }
-    httpsAddress += "/";
-    console.log('Server running at', httpAddress, 'and', httpsAddress);
 }
 
 // Response codes: see http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
@@ -87,6 +71,18 @@ function isImage(type) {
     }
 }
 
+function serve_dynamic_html(request, response)
+{
+    var file = request.url;
+
+    split = file.split("?");
+    file = split[0];
+    params = split[1].split("&");
+    console.log("Split params:");
+    console.log(params);
+
+}
+
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
 // that every URL should start with the prefix.  A URL ending with / is treated
 // as a folder and index.html is added.  A file name without an extension is
@@ -96,12 +92,24 @@ function isImage(type) {
 function serve(request, response) {
     var file = request.url;
     console.log(file);
+    
+    // If dynamic, handle it without sending an existing file because it doesn't exist.
+    if (starts(file, '/library.html?') && (file.match(/\?/g) || []).length == 1)
+    {
+        serve_dynamic_html(request, response);
+        return;
+    }
 
     if (file == '/')
-        file = file + 'index.html'
+        file = file + 'index.html';
 
+    if (file.indexOf("..") > -1)
+    {
+        console.log("Fail 2");
+        return fail(response, Error);
+    }
+    
     var type = findType(request, path.extname(file));
-    console.log(type);
     if (! type)
     {
         console.log("Fail 3");
@@ -130,7 +138,7 @@ function serve(request, response) {
     {
         return fail(response, NotFound);
     }
-    
+ 
     if (! noSpaces(file)) 
     {
         console.log("Fail 5");
@@ -227,6 +235,16 @@ function test() {
 function failTest(s) {
     console.log(s);
     process.exit(1);
+}
+
+function createRow(book)
+{
+    var row = "<td><input type=\"submit\" name=\"submit\" id=\"submitrequest\"/>"
+    row += "<td>" + book.author + "</td>"
+    row += "<td>" + book.published.toString() + "</td>"
+    row += "<td>" + book.illustrated + "</td>"
+    row += "</tr>"
+    return row;
 }
 
 // A dummy key and certificate are provided for https.
