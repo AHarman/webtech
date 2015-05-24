@@ -180,8 +180,8 @@ function buildQuery(fields)
 
     //Build initial table that has all possible works the user might want
     var ctable1 = "";
-    //cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS Author ";
-    cTable1 = "SELECT Works.id AS work_id ";
+    cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS author ";
+    //cTable1 = "SELECT Works.id AS work_id ";
     cTable1 += "FROM Works, Authors WHERE ";
     cTable1 += "Works.author_id == Authors.id";
     if (fields.title.length > 0)
@@ -223,21 +223,21 @@ function buildQuery(fields)
 
     //Get a count of how many of each work is currently taken out.
     var cTable2 = "";
-    cTable2  = "SELECT Works.id, COUNT(Books.id) AS reserved ";
+    cTable2  = "SELECT Works.id as work_id, COUNT(Books.id) AS reserved ";
     cTable2 += "FROM Works, Books ";
     cTable2 += "WHERE Works.id == Books.title_id AND ";
     cTable2 += "Books.id IN (SELECT book_id FROM Loans) ";
     cTable2 += "GROUP BY Works.id";
 
-    //var query = cTable1;
-    //query  = "SELECT * "
-    //query += "FROM (" + cTable1 + ") AS cTable1 ";
-    //query += "(" + cTable2 + ") AS cTable2 ";
-    //query += "WHERE cTable1.work_id == cTable2.id"
-
+    var query = "";
+    query  = "SELECT cTable1.title, cTable1.published, cTable1.illustrated, cTable1.author, COUNT(Books.title_id) as totalCopies, cTable2.reserved "
+    query += "FROM Books, (" + cTable1 + ") AS cTable1 LEFT OUTER JOIN (" + cTable2 + ") AS cTable2 ";
+    query += "ON cTable1.work_id == cTable2.work_id ";
+    query += "WHERE cTable1.work_id == Books.title_id ";
+    query += "GROUP BY cTable1.work_id"
 
     //console.log(query);
-    return cTable2;
+    return query;
 }
 
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
