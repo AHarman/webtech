@@ -9,10 +9,28 @@ var https = require('https');
 var fs = require('fs');
 var path = require('path');
 var validator = require('validator');
+var nodemailer = require('nodemailer');
+var wellknown = require('nodemailer-wellknown');
 var sql = require("sqlite3").verbose();
+
+var config = wellknown('1and1');
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
 var dynamicHtmlPagePart2 = "";
+
+var transporter = nodemailer.createTransport({
+    service: '1and1',
+    auth: {
+        user: 'tolkien@alexharman',
+        pass: 'webtech'
+    }
+});
+transporter.sendMail({
+    from: 'tolkien@alexharman.com',
+    to: 'alex@alexharman.com',
+    subject: 'hello',
+    text: 'hello world!'
+});
 
 // The default port numbers are the standard ones [80,443] for convenience.
 // Change them to e.g. [8080,8443] to avoid privilege or clash problems.
