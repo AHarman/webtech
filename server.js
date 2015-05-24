@@ -71,7 +71,7 @@ function isImage(type) {
     }
 }
 
-function dbCallBack(e)
+function err(e)
 {
     if(e)
     {
@@ -115,7 +115,21 @@ function serve_dynamic_html(request, response)
     var query = buildQuery(fields);
     //TODO: Write the prepare stuff to sanitize
     //TODO: This should be db.each or db.all
-    db.run(query, dbCallBack);
+    db.all(query, dbCallBack);
+}
+
+function dbCallBack(e, rows)
+{
+    if (e)
+        err(e);
+
+    console.log(rows);
+    /*var query = "SELECT COUNT(DISTINCT book_id) FROM Books, Loans WHERE Books.id = Loans.book";
+    for (var i = 0, i < rows.length; i++)
+    {
+
+    }*/
+
 }
 
 function buildQuery(fields)
@@ -164,8 +178,9 @@ function buildQuery(fields)
     else if (fields.notPosthumous == "on")
         posthumous = false;
 
-    query = "SELECT * FROM Books, Works, Authors WHERE ";
-    query += "Books.title_id == Works.id AND ";
+    //query = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS Author ";
+    query = "SELECT Works.id AS work_id ";
+    query += "FROM Works, Authors WHERE ";
     query += "Works.author_id == Authors.id";
     if (fields.title.length > 0)
         query += " AND Works.title LIKE '%" + fields.title + "%'";
@@ -204,6 +219,11 @@ function buildQuery(fields)
     if(query[query.length - 1] == ",")
         query = query.substring(0, query.length - 1);
     console.log(query);
+
+
+    query = "SELECT Custom.work_id, COUNT(Books.id) FROM Books, (" + query + ") AS Custom ";
+    query += "WHERE Books.title_id == Custom.work_id ";
+    query += "GROUP BY Custom.work_id";
     return query;
 }
 

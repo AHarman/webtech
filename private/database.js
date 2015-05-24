@@ -15,14 +15,13 @@ function startup()
     query = "CREATE TABLE IF NOT EXISTS Authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL)";
     db.run(query, err);
 
-    query = "CREATE TABLE IF NOT EXISTS Works (id INTEGER PRIMARY KEY, author_id INTEGER NOT NULL, title TEXT NOT NULL, published DATE, ";
+    query = "CREATE TABLE IF NOT EXISTS Works (id INTEGER PRIMARY KEY, author_id INTEGER NOT NULL, title TEXT NOT NULL, published DATE, illustrated INTEGER NOT NULL DEFAULT 0, ";
     query = query + "inArda INTEGER NOT NULL DEFAULT 1, posthumous INTEGER NOT NULL DEFAULT 0, meta INTEGER NOT NULL DEFAULT 0, ";
-    query = query + "CHECK (inArda IN (0,1)), CHECK (posthumous IN (0,1)), CHECK (meta IN (0,1)), ";
+    query = query + "CHECK (inArda IN (0,1)), CHECK (posthumous IN (0,1)), CHECK (meta IN (0,1)), CHECK (illustrated IN (0,1)), ";
     query = query + "FOREIGN KEY(author_id) REFERENCES Authors(id))";
     db.run(query, err);
     
-    query = "CREATE TABLE IF NOT EXISTS Books (id INTEGER PRIMARY KEY, title_id INTEGER NOT NULL, illustrated INTEGER NOT NULL DEFAULT 0, ";
-    query = query + "CHECK (illustrated IN (0,1)), ";
+    query = "CREATE TABLE IF NOT EXISTS Books (id INTEGER PRIMARY KEY, title_id INTEGER NOT NULL, ";
     query = query + "FOREIGN KEY(title_id) REFERENCES Works(id))";
     db.run(query, err);
 
@@ -79,7 +78,7 @@ function startup()
     query = query + "1, ";
     query = query + "1 ";
     query = query + "FROM Authors ";
-    query = query + "WHERE Authors.name = 'J. R. R. Tolkien'";
+    query = query + "WHERE Authors.name = 'David Day'";
     db.run(query, err);
 
     query = "INSERT INTO Works (id, author_id, title, published, inArda) SELECT null, ";
@@ -88,7 +87,7 @@ function startup()
     query = query + "'1975-9-1', ";
     query = query + "0 ";
     query = query + "FROM Authors ";
-    query = query + "WHERE Authors.name = 'J. R. R. Tolkien'";
+    query = query + "WHERE Authors.name = 'Unknown'";
     db.run(query, err);
 
     for (var i = 0; i < 3; i++)
@@ -102,6 +101,9 @@ function startup()
     
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'Sir Gawain and the Green Knight: with Pearl and Sir Orfeo'",err);
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'A Guide to Tolkien'", err);
+
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 0)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 1)", err);
     
     db.close();
     return
