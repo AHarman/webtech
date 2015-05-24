@@ -87,22 +87,6 @@ function parseInput(event)
                 changeRowBackground(i, "red");
                 return stopEvent(event);
             } 
-            // else if(inputs1[i] == inputs1[i + 1]) 
-            // {
-            //     inputs2.push(-1);
-            // }
-            // else
-            // {
-            //     //One true one false, set to first one
-            //     if(inputs1[i])
-            //     {
-            //         inputs2.push(1);
-            //     }
-            //     else
-            //     {
-            //         inputs2.push(0);
-            //     }
-            // }
             changeRowBackground(i, "transparent");
     }
     return true;
