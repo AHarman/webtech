@@ -102,8 +102,9 @@ function startup()
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'Sir Gawain and the Green Knight: with Pearl and Sir Orfeo'",err);
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'A Guide to Tolkien'", err);
 
-    db.run("INSERT INTO LOANS VALUES('example@example.com', 0)", err);
     db.run("INSERT INTO LOANS VALUES('example@example.com', 1)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 2)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 10)", err);
     
     db.close();
     return

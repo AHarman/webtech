@@ -178,53 +178,66 @@ function buildQuery(fields)
     else if (fields.notPosthumous == "on")
         posthumous = false;
 
-    //query = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS Author ";
-    query = "SELECT Works.id AS work_id ";
-    query += "FROM Works, Authors WHERE ";
-    query += "Works.author_id == Authors.id";
+    //Build initial table that has all possible works the user might want
+    var ctable1 = "";
+    //cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS Author ";
+    cTable1 = "SELECT Works.id AS work_id ";
+    cTable1 += "FROM Works, Authors WHERE ";
+    cTable1 += "Works.author_id == Authors.id";
     if (fields.title.length > 0)
-        query += " AND Works.title LIKE '%" + fields.title + "%'";
+        cTable1 += " AND Works.title LIKE '%" + fields.title + "%'";
     if (fields.author.length > 0 && ! writtenByTolkien)
-        query += " AND Works.author LIKE '%" + fields.author + "%'";
+        cTable1 += " AND Works.author LIKE '%" + fields.author + "%'";
     if (fields.collaborator.length > 0)
-        query += " AND Works.title LIKE '%" + fields.collaborator + "%'";
+        cTable1 += " AND Works.title LIKE '%" + fields.collaborator + "%'";
 
     //Have to be specific as we're using null as "don't care"
     if (writtenByTolkien == true)
-        query += " AND Authors.name == 'J. R. R. Tolkien'";
+        cTable1 += " AND Authors.name == 'J. R. R. Tolkien'";
     else if(writtenByTolkien == false)
-        query += " AND Authors.name != 'J. R. R. Tolkien'";
+        cTable1 += " AND Authors.name != 'J. R. R. Tolkien'";
     
     if (setInArda == true)
-        query += " AND Works.inArda == 1";
+        cTable1 += " AND Works.inArda == 1";
     else if (setInArda == false)
-        query += " AND Works.inArda == 0";
+        cTable1 += " AND Works.inArda == 0";
     
     if (meta == true)
-        query += " AND Works.meta == 1";
+        cTable1 += " AND Works.meta == 1";
     else if (meta == false)
-        query += " AND Works.meta == 0";
+        cTable1 += " AND Works.meta == 0";
     
     if (illustrated == true)
-        query += " AND Books.illustrated == 1";
+        cTable1 += " AND Books.illustrated == 1";
     else if (illustrated == false)
-        query += " AND Books.illustrated == 0";
+        cTable1 += " AND Books.illustrated == 0";
     
     if (posthumous == true)
-        query += " AND Books.posthumous == 1";
+        cTable1 += " AND Books.posthumous == 1";
     else if (posthumous == false)
-        query += " AND Books.posthumous == 0";
+        cTable1 += " AND Books.posthumous == 0";
 
-    query = query.trim();
-    if(query[query.length - 1] == ",")
-        query = query.substring(0, query.length - 1);
-    console.log(query);
+    cTable1 = cTable1.trim();
+    if(cTable1[cTable1.length - 1] == ",")
+        cTable1 = cTable1.substring(0, cTable1.length - 1);
+
+    //Get a count of how many of each work is currently taken out.
+    var cTable2 = "";
+    cTable2  = "SELECT Works.id, COUNT(Books.id) AS reserved ";
+    cTable2 += "FROM Works, Books ";
+    cTable2 += "WHERE Works.id == Books.title_id AND ";
+    cTable2 += "Books.id IN (SELECT book_id FROM Loans) ";
+    cTable2 += "GROUP BY Works.id";
+
+    //var query = cTable1;
+    //query  = "SELECT * "
+    //query += "FROM (" + cTable1 + ") AS cTable1 ";
+    //query += "(" + cTable2 + ") AS cTable2 ";
+    //query += "WHERE cTable1.work_id == cTable2.id"
 
 
-    query = "SELECT Custom.work_id, COUNT(Books.id) FROM Books, (" + query + ") AS Custom ";
-    query += "WHERE Books.title_id == Custom.work_id ";
-    query += "GROUP BY Custom.work_id";
-    return query;
+    //console.log(query);
+    return cTable2;
 }
 
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
