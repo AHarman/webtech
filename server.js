@@ -297,14 +297,14 @@ function serve_email_submit(request, response, callback)
 
     var temp = params[params.length - 2].split("=");
     if(temp.length != 2)
-        return fail(response, Error);
+        return booking-problem.html
     temp = temp[1].split("%40");
     temp = temp[0] + "@" + temp["1"];
 
     if(validator.isEmail(temp))
         fields.email = temp;
     else
-        return fail(response, Error);
+        return redirect(response, "/invalid-email.html");
 
     for (var i = 0; i < params.length - 2; i++)
     {
