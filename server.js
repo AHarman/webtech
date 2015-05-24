@@ -9,7 +9,7 @@ var https = require('https');
 var fs = require('fs');
 var path = require('path');
 var sql = require("sqlite3").verbose();
-var db = new sql.Database("private/tolkien.sql", sqlite3.OPEN_READWRITE);
+var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 
 // The default port numbers are the standard ones [80,443] for convenience.
 // Change them to e.g. [8080,8443] to avoid privilege or clash problems.
@@ -71,6 +71,16 @@ function isImage(type) {
     }
 }
 
+function dberr(e)
+{
+    if(e)
+    {
+        console.log("8");
+        console.log(e.message);
+        throw e;
+    }
+}
+
 function serve_dynamic_html(request, response)
 {
     var file = request.url;
@@ -78,9 +88,122 @@ function serve_dynamic_html(request, response)
     split = file.split("?");
     file = split[0];
     params = split[1].split("&");
-    console.log("Split params:");
-    console.log(params);
+    fields = {  title: null,
+                author: null,
+                collaborator: null,
+                writtenByTolkien: null,
+                notWrittenByTolkien: null,
+                setInArda: null,
+                notSetInArda: null,
+                meta: null,
+                notMeta: null,
+                illustrated: null,
+                notIllustrated: null,
+                posthumous: null,
+                notPosthumous: null
+    };
 
+    var temp;
+    for (var i = 0; i < params.length; i++)
+    {
+        temp = params[i].split("=");
+        if (temp.length > 1 && temp[0] in fields && temp[1].length > 0)
+        {
+            fields[temp[0]] = temp[1].trim();
+        }
+    }
+    
+    var query = buildQuery(fields);
+    db.run(query, dberr);
+}
+
+function buildQuery(fields)
+{
+    var writtenByTolkien = null;
+    var setInArda = null;
+    var meta = null;
+    var illustrated = null;
+    var posthumous = null;
+
+    if (fields.writtenByTolkien == fields.notWrittenByTolkien && fields.writtenByTolkien == "on" ||
+        fields.setInArda        == fields.notSetInArda        && fields.setInArda        == "on" ||
+        fields.meta             == fields.notMeta             && fields.meta             == "on" ||
+        fields.illustrated      == fields.notIllustrated      && fields.illustrated      == "on" ||
+        fields.posthumous       == fields.notPosthumous       && fields.posthumous       == "on")
+        return null;
+    if(!fields.title)
+        fields.title = "";
+    if(!fields.author)
+        fields.author = "";
+    if(!fields.collaborator)
+        fields.collaborator = "";
+
+    if (fields.writtenByTolkien == "on")
+        writtenByTolkien = true;
+    else if (fields.notWrittenByTolkien == "on")
+        writtenByTolkien = false;
+    
+    if (fields.setInArda == "on")
+        setInArda = true;
+    else if (fields.notSetInArda == "on")
+        setInArda = false;
+
+    if (fields.meta == "on")
+        meta = true;
+    else if (fields.notMeta == "on")
+        meta = false;
+
+    if (fields.illustrated == "on")
+        illustrated = true;
+    else if (fields.notIllustrated == "on")
+        illustrated = false;
+
+    if (fields.posthumous == "on")
+        posthumous = true;
+    else if (fields.notPosthumous == "on")
+        posthumous = false;
+
+    query = "SELECT * FROM Books, Works, Authors WHERE ";
+    query += "Books.title_id == Works.id, ";
+    query += "Works.author_id = Authors.id, ";
+    if (fields.title.length > 0)
+        query += "Works.title LIKE '%" + fields.title + "%', ";
+    if (fields.author.length > 0 && ! writtenByTolkien)
+        query += "Works.author LIKE '%" + fields.author + "%', ";
+    if (fields.collaborator.length > 0)
+        query += "Works.title LIKE '%" + fields.collaborator + "%', ";
+
+    //Have to be specific as we're using null as "don't care"
+    if (writtenByTolkien == true)
+        query += "Authors.name == 'J. R. R. Tolkien', ";
+    else if(writtenByTolkien == false)
+        query += "Authors.name != 'J. R. R. Tolkien', ";
+    
+    if (setInArda == true)
+        query += "Works.inArda == 1, ";
+    else if (setInArda == false)
+        query += "Works.inArda == 0, ";
+    
+    if (meta == true)
+        query += "Works.meta == 1, ";
+    else if (meta == false)
+        query += "Works.meta == 0, ";
+    
+    if (illustrated == true)
+        query += "Books.illustrated == 1, ";
+    else if (illustrated == false)
+        query += "Books.illustrated == 0, ";
+    
+    if (posthumous == true)
+        query += "Books.posthumous == 1";
+    else if (posthumous == false)
+        query += "Books.posthumous == 0";
+
+    query = query.trim();
+    if(query[query.length - 1] == ",")
+        query = query.substring(0, query.length - 1);
+    console.log(query);
+    return query;
 }
 
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
@@ -94,7 +217,7 @@ function serve(request, response) {
     console.log(file);
     
     // If dynamic, handle it without sending an existing file because it doesn't exist.
-    if (starts(file, '/library.html?') && (file.match(/\?/g) || []).length == 1)
+    if ((starts(file, '/library.html?') || starts(file, '/library-nojs.html?')) && (file.match(/\?/g) || []).length == 1)
     {
         serve_dynamic_html(request, response);
         return;
