@@ -117,6 +117,8 @@ function serve_search(request, response, callback)
     
     var query = buildQuery(fields);
     //TODO: Write the prepare stuff to sanitize
+    if(query == null)
+        return redirect(response, "/booking-problem.html");
     db.all(query, dbSearchCallBack);
 
     function dbSearchCallBack(e, rows)
@@ -209,7 +211,7 @@ function buildQuery(fields)
     if (fields.title.length > 0)
         cTable1 += " AND Works.title LIKE '%" + fields.title + "%'";
     if (fields.author.length > 0 && ! writtenByTolkien)
-        cTable1 += " AND Works.author LIKE '%" + fields.author + "%'";
+        cTable1 += " AND Authors.name LIKE '%" + fields.author + "%'";
     if (fields.collaborator.length > 0)
         cTable1 += " AND Works.title LIKE '%" + fields.collaborator + "%'";
 
@@ -276,7 +278,7 @@ function endsWith(str, suffix) {
 
 function serveIncorrectEmailPage(request, response, callback)
 {
-    return fail(response, Error);
+    return redirect(response, "/booking-problem.html");
 }
 
 function serveIncorrectBooking(request, response, callback)
@@ -349,9 +351,6 @@ function serve_email_submit(request, response, callback)
         var query = "SELECT Members.email FROM Members WHERE Members.email = '" + fields.email + "'";
         db.all(query, checkEmailCallBack);
     }
-    
-
-    
 
     function checkEmailCallBack(e, rows)
     {

@@ -93,37 +93,34 @@ function parseInput(event)
 }
 
 function requestBook(event) {
-    console.log("In request book");
-    event.returnValue = false;
-    if(event.preventDefault)
-    {
-        event.preventDefault();
-    }
     var email = form2.elements["email"].value.toString();
     var checks = [];
-    var myBooks = [];
+    var rows = document.getElementById("results-table").rows;
 
     if(email == "")
     {
-        return;
+        window.alert("Please enter your email so we can verify your membership");
+        return stopEvent(event);
     }
 
     for(var i = 0; i < form2.elements.length - 2; i++)
     {
-        checks[i] = form2.elements[i];
-        if(form2.elements[i].checked){
-            myBooks.push(form2.elements[i].parentNode.parentNode.cells[1].childNodes[0].nodeValue);
+        if(form2.elements[i].checked)
+        {
+            console.log(i + " is checked");
+            checks.push(form2.elements[i]);
+            if (rows[i + 1].cells[6].innerHTML == "0")
+            {
+                window.alert("Please only select books that are available");
+                return stopEvent(event);
+            }
         }
     }
-    if(myBooks.length != 0)
+    console.log(checks);
+    if(checks.length == 0)
     {
-        var alertString = "A request by:\n" + email + "\nFor the following books:\n"
-        for(var i = 0; i < myBooks.length; i++)
-        {
-            alertString += myBooks[i] + "\n";
-        }
-        alertString += "Has been registered. We will be in contact shortly."
-        window.alert(alertString);
+        window.alert("Select at least one book that is available.");
+        return stopEvent(event);
     }
     return true;
 }

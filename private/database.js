@@ -12,10 +12,10 @@ if(!exists)
 function startup() 
 {
     var query = "";
-    query = "CREATE TABLE IF NOT EXISTS Authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL)";
+    query = "CREATE TABLE IF NOT EXISTS Authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE)";
     db.run(query, err);
 
-    query = "CREATE TABLE IF NOT EXISTS Works (id INTEGER PRIMARY KEY, author_id INTEGER NOT NULL, title TEXT NOT NULL, published DATE, illustrated INTEGER NOT NULL DEFAULT 0, ";
+    query = "CREATE TABLE IF NOT EXISTS Works (id INTEGER PRIMARY KEY, author_id INTEGER NOT NULL, title TEXT NOT NULL COLLATE NOCASE, published DATE, illustrated INTEGER NOT NULL DEFAULT 0, ";
     query = query + "inArda INTEGER NOT NULL DEFAULT 1, posthumous INTEGER NOT NULL DEFAULT 0, meta INTEGER NOT NULL DEFAULT 0, ";
     query = query + "CHECK (inArda IN (0,1)), CHECK (posthumous IN (0,1)), CHECK (meta IN (0,1)), CHECK (illustrated IN (0,1)), ";
     query = query + "FOREIGN KEY(author_id) REFERENCES Authors(id))";
@@ -25,10 +25,10 @@ function startup()
     query = query + "FOREIGN KEY(title_id) REFERENCES Works(id))";
     db.run(query, err);
 
-    query = "CREATE TABLE IF NOT EXISTS Members (email TEXT PRIMARY KEY)";
+    query = "CREATE TABLE IF NOT EXISTS Members (email TEXT PRIMARY KEY COLLATE NOCASE)";
     db.run(query, err);
 
-    query = "CREATE TABLE IF NOT EXISTS Loans (member_email TEXT, book_id INTEGER,";
+    query = "CREATE TABLE IF NOT EXISTS Loans (member_email TEXT COLLATE NOCASE, book_id INTEGER,";
     query = query + "FOREIGN KEY(member_email) REFERENCES Members(email),";
     query = query + "FOREIGN KEY(book_id) REFERENCES Books(id))";
     db.run(query, err);
