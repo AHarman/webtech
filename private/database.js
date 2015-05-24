@@ -39,10 +39,11 @@ function startup()
     db.run("INSERT INTO Members VALUES('example@example.com')", err);
     db.run("INSERT INTO Members VALUES('alex@alexharman.com')", err);
 
-    query = "INSERT INTO Works (id, author_id, title, published) SELECT null, ";
+    query = "INSERT INTO Works (id, author_id, title, published, illustrated) SELECT null, ";
     query = query + "Authors.id, ";
     query = query + "'The Hobbit', ";
-    query = query + "'1937-9-21' ";
+    query = query + "'1937-9-21', ";
+    query = query + "1 ";
     query = query + "FROM Authors ";
     query = query + "WHERE Authors.name = 'J. R. R. Tolkien'";
     db.run(query, err);

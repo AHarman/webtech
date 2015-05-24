@@ -86,7 +86,7 @@
                             <tr id="submitrow">
                                 <td></td>
                                 <td id="submitcell" colspan="2">
-                                    <input type="submit" name="submit" id="submitform"/>
+                                    <input type="submit" name="submit" id="submitform" value="Search"/>
                                 </td>
                             </tr>
                         </tbody>
@@ -98,13 +98,31 @@
             <div id="results-container">
                 <form id="request-book">
                     <table id="results-table">
-                        <HOOK/>
+                        <tbody>
+                            <tr class="results-header">
+                                <td></td>
+                                <td class="title leftalign">Title:</td>
+                                <td>Author:</td>
+                                <td>Published:</td>
+                                <td>Illustrated:</td>
+                                <td>Total Copies:</td>
+                                <td>Available:</td>
+                            </tr>
+                            <HOOK/>
+                            <tr class="submitrow">
+                                <form id="email-form">
+                                    <td colspan="7">Email address:
+                                        <input type="text" name="email" id="email" />
+                                        <input type="submit" name="submit" id="submitform" value="Request books" >
+                                    </td>
+                                </form>
+                            </tr>
+                        </tbody>
                     </table>
                 </form>
             </div>
         </div>
     </div>
-    <script src="library.js" type="text/javascript"></script>
 </body>
 </html>
 

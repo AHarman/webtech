@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
+    <head>
+        <meta charset="UTF-8"/>
+        <!-- javascript at the bottom of the page-->
+        <link href="generic.css" media="screen" rel="stylesheet" type="text/css"/>
+        <link href="library.css" media="screen" rel="stylesheet" type="text/css"/>
+        <title>UoB Tolkien Society</title>
+        <!--[if gte IE 9]>
+        <style type="text/css">
+            .gradient {
+            filter: none;
+            }
+        </style>
+        <![endif]-->
+    </head>
+    <body>
+        <div id="wrapper">
+            <div id="logobar">
+                <a href="./index.html"><img id="ourlogo" src="smag.png" alt="Tolkien Society Logo"/></a>
+                <div id="ourlinks">
+                    <a href="https://twitter.com/tolkiensocuob"                 >
+                        <img id="twitterlogo"  class="linkicon" src="twitter.png"  alt="twitter icon"/>
+                    </a>
+                    <a href="https://www.facebook.com/groups/UOBtolkiensoc/"    >
+                        <img id="facebooklogo" class="linkicon" src="facebook.png" alt="facebook icon"/>
+                    </a
+                        >
+                    <a href="https://www.ubu.org.uk/activities/societies/12753/">
+                        <img id="ubulogo"      class="linkicon" src="ubu.jpg"      alt="UBU icon"/>
+                    </a>
+                </div>
+            </div>
+            <div id="navbar">
+                <a class="navbar-link" href="about.html">
+                    <div class="navbar-block leftmost">
+                        <div class="vert-center-container">
+                            <p>About the society</p>
+                        </div>
+                    </div>
+                    </a>
+                    <div class="navbar-spacer gradient leftmost"></div>
+                <a class="navbar-link" href="https://www.ubu.org.uk/activities/societies/12753/">
+                    <div class="navbar-block leftmost">
+                        <div class="vert-center-container">
+                            <p>Join us</p>
+                        </div>
+                    </div>
+                </a>
+                <div class="navbar-spacer gradient leftmost"></div>
+                <a class="navbar-link" href="library.html">
+                    <div class="navbar-block leftmost">
+                        <div class="vert-center-container">
+                            <p>Library</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div id="main-section">
+                <h1>Library</h1>
+                <div id="preamble">
+                    <p>Here you can browse through our collection of Tolkien's works and books related to his works.
+                    </p>
+                    <p>All books here are available to be borrowed by any member of the society. If you wish to borrow a book, please contact the committe or ask on the Facebook group and we'll get it to you as soon as we can.
+                    </p>
+                    <p>We are slowly building up this collection, so if you want to donate a book (or see a cheap copy somewhere around Bristol!) then contact the committee.
+                    </p>
+                </div>
+                <div id="form-container">
+                    <form id="advanced-search">
+                        <table>
+                            <tbody>
+                                <tr id="titlerow">
+                                    <td><label>Title:</label></td>
+                                    <td colspan="2"><input type="text"     name="title"/><br/></td>
+                                </tr>
+                                <tr id="authorrow">
+                                    <td><label>Author:</label></td>
+                                    <td colspan="2"><input type="text"     name="author"/><br/></td>
+                                </tr>
+                                <tr id="collabrow">
+                                    <td><label>Collaborator:</label></td>
+                                    <td colspan="2"><input type="text"     name="collaborator"/><br/></td>
+                                </tr>
+                                <tr id="tolkienrow">
+                                    <td><label>Written by Tolkien:</label></td>
+                                    <td>Yes: <input type="checkbox" name="writtenByTolkien"/></td>
+                                    <td>No:  <input type="checkbox" name="notWrittenByTolkien"/></td>
+                                </tr>
+                                <tr id="ardarow">
+                                    <td><label>Set in Middle-earth:</label></td>
+                                    <td>Yes: <input type="checkbox" name="setInArda"/></td>
+                                    <td>No: <input type="checkbox" name="notSetInArda"/></td>
+                                </tr>
+                                <tr id="metarow">
+                                    <td><label>Annotated/About Tolkien:</label></td>
+                                    <td>Yes: <input type="checkbox" name="meta"/></td>
+                                    <td>No:  <input type="checkbox" name="notMeta"/></td>
+                                </tr>
+                                <tr id="illustrow">
+                                    <td><label>Illustrated copy:</label></td>
+                                    <td>Yes: <input type="checkbox" name="illustrated"/></td>
+                                    <td>No:  <input type="checkbox" name="notIllustrated"/></td>
+                                </tr>
+                                <tr id="posthumousrow">
+                                    <td><label>Posthumous work:</label></td>
+                                    <td>Yes: <input type="checkbox" name="posthumous"/></td>
+                                    <td>No:  <input type="checkbox" name="notPosthumous"/></td>
+                                </tr>
+                                <tr id="submitrow">
+                                    <td></td>
+                                    <td id="submitcell" colspan="2">
+                                        <input type="submit" name="submit" id="submitform" value="Search"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </form>
+                    <img id="books" src="./tolkien-books.jpg" alt="A picture of someof the society's books"/>
+                </div>
+                <div id="results-container">
+                    <form id="request-book">
+                        <table id="results-table">
+                            <tbody>
+                                <tr class="results-header">
+                                    <td></td>
+                                    <td class="title leftalign">Title:</td>
+                                    <td>Author:</td>
+                                    <td>Published:</td>
+                                    <td>Illustrated:</td>
+                                    <td>Total Copies:</td>
+                                    <td>Available:</td>
+                                </tr>
+                                <tr class="results-row parity1">
+                                    <td class="checkcell"><input type="checkbox" name="check1" id="check1" /></td>
+                                    <td class="leftalign">
+                                        The Hobbit
+                                    </td>
+                                    <td class="leftalign">J. R. R. Tolkien</td>
+                                    <td class="leftalign">
+                                        1937-9-21
+                                    </td>
+                                    <td class="illustratedcell"><img class="icon" src="./tick.png" alt="true" /></td>
+                                    <td class="copiescell">3</td>
+                                    <td class="freecell">1</td>
+                                </tr>
+                                <tr class="results-row parity0">
+                                    <td class="checkcell"><input type="checkbox" name="check2" id="check2" /></td>
+                                    <td class="leftalign">The Fellowship of the Ring</td>
+                                    <td class="leftalign">J. R. R. Tolkien</td>
+                                    <td class="leftalign">1954-7-29</td>
+                                    <td class="illustratedcell">
+                                        <img class="icon" src="./cross.png" alt="false" />
+                                    </td>
+                                    <td class="copiescell">5</td>
+                                    <td class="freecell">5</td>
+                                </tr>
+                                <tr class="results-row parity1">
+                                    <td class="checkcell"><input type="checkbox" name="check3" id="check3" /></td>
+                                    <td class="leftalign">The Two Towers</td>
+                                    <td class="leftalign">J. R.R. Tolkien</td>
+                                    <td class="leftalign">1954-11-11</td>
+                                    <td class="illustratedcell"><img class="icon" src="./cross.png" alt="alse" /></td>
+                                    <td class="copiescell">4</td>
+                                    <td class="freecell">3</td>
+                                </tr>
+                                <tr class="results-row parity0">
+                                    <td class="checkcell"><input type="checkbox" name="check4" id="check4" /></td>
+                                    <td class="leftalign">The Return of the King</td>
+                                    <td class="leftalign">J. R. R. Tolkien</td>
+                                    <td class="leftalign">1955-10-20</td>
+                                    <td class="illustratedcell"><img class="icon" src="./cross.png" alt="alse" /></td>
+                                    <td class="copiescell">4</td>
+                                    <td class="freecell">4</td>
+                                </tr>
+                                <tr class="results-row parity1">
+                                    <td class="checkcell"><input type="checkbox" name="check5" id="check5" /></td>
+                                    <td class="leftalign">A Guide To Tolkien </td>
+                                    <td class="leftalign">David Day</td>
+                                    <td class="leftalign">2001-10-10</td>
+                                    <td class="illustratedcell"><img class="icon" src="./cross.png" alt="false" /></td>
+                                    <td class="copiescell">1</td>
+                                    <td class="freecell">1</td>
+                                </tr>
+                                <tr class="results-row parity0">
+                                    <td class="checkcell"><input type="checkbox" name="check6" id="check6" /></td>
+                                    <td class="leftalign">Sir Gawain and the Green Knight: with Pearl and Sir Orfeo</td>
+                                    <td class="leftalign">Unknown</td>
+                                    <td class="leftalign">1975-9-1</td>
+                                    <td class="illustratedcell"><img class="icon" src="./cross.png" alt="false" /></td>
+                                    <td class="copiescell">1</td>
+                                    <td class="freecell">1</td>
+                                </tr>
+                                <tr class="submitrow">
+                    <form id="email-form">
+                    <td colspan="7">Email address:
+                    <input type="text" name="email" id="email" />
+                    <input type="submit" name="submit" id="submitform" value="Request books" >
+                    </td>
+                    </form>
+                    </tr>
+                    </tbody>
+                    </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

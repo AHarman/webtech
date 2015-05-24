@@ -10,6 +10,8 @@ var fs = require('fs');
 var path = require('path');
 var sql = require("sqlite3").verbose();
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
+var dynamicHtmlPagePart1 = "";
+var dynamicHtmlPagePart2 = "";
 
 // The default port numbers are the standard ones [80,443] for convenience.
 // Change them to e.g. [8080,8443] to avoid privilege or clash problems.
@@ -80,7 +82,7 @@ function err(e)
     }
 }
 
-function serve_dynamic_html(request, response)
+function serve_search(request, response, callback)
 {
     var file = request.url;
 
@@ -114,22 +116,41 @@ function serve_dynamic_html(request, response)
     
     var query = buildQuery(fields);
     //TODO: Write the prepare stuff to sanitize
-    //TODO: This should be db.each or db.all
     db.all(query, dbCallBack);
-}
 
-function dbCallBack(e, rows)
-{
-    if (e)
-        err(e);
-
-    console.log(rows);
-    /*var query = "SELECT COUNT(DISTINCT book_id) FROM Books, Loans WHERE Books.id = Loans.book";
-    for (var i = 0, i < rows.length; i++)
+    function dbCallBack(e, rows)
     {
+        if (e)
+            err(e);
 
-    }*/
+        //console.log(rows);
+        var htmlRows = "<tr class=\"results-header\"><td></td><td class=\"title leftalign\">Title:</td><td>Author:</td><td>Published:</td><td>Illustrated:</td><td>Total Copies:</td><td>Available:</td></tr>";
+        for (var i = 0; i < rows.length; i++)
+        {
+            if(rows[i].reserved == null)
+                rows[i].reserved = 0;
+            //Do this by hand as it's fairly simple and we don't want to use external libraries
+            htmlRows +="<tr class=\"results-row ";
+            if(i % 2)
+                htmlRows += "parity0\">";
+            else
+                htmlRows += "parity1\">";
+            htmlRows += "<td class=\"checkcell\"><input type=\"checkbox\" name=\"check" + rows[i].work_id + "\" id=\"check" + rows[i].work_id +"\" /></td>";
+            htmlRows += "<td class=\"leftalign\">" + rows[i].title + "</td>";
+            htmlRows += "<td class=\"leftalign\">" + rows[i].author + "</td>";
+            htmlRows += "<td class=\"leftalign\">" + rows[i].published + "</td>";
+            if (rows[i].illustrated == 1)
+                htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./tick.png\" alt=\"true\" /></td>";
+            else
+                htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./cross.png\" alt=\"false\" /></td>";
+            htmlRows += "<td class=\"copiescell\">" + rows[i].totalCopies + "</td>";
+            htmlRows += "<td class=\"freecell\">" + (rows[i].totalCopies - rows[i].reserved) + "</td>";
+            htmlRows +="</tr>"
+        }
 
+        var page = dynamicHtmlPagePart1 + htmlRows + dynamicHtmlPagePart2;
+        callback(null, page);
+    }
 }
 
 function buildQuery(fields)
@@ -230,7 +251,13 @@ function buildQuery(fields)
     cTable2 += "GROUP BY Works.id";
 
     var query = "";
-    query  = "SELECT cTable1.title, cTable1.published, cTable1.illustrated, cTable1.author, COUNT(Books.title_id) as totalCopies, cTable2.reserved "
+    query  = "SELECT cTable1.work_id AS work_id, ";
+    query += "cTable1.title AS title, ";
+    query += "cTable1.published AS published, ";
+    query += "cTable1.illustrated AS illustrated, ";
+    query += "cTable1.author AS author, ";
+    query += "COUNT(Books.title_id) AS totalCopies, ";
+    query += "cTable2.reserved AS reserved ";
     query += "FROM Books, (" + cTable1 + ") AS cTable1 LEFT OUTER JOIN (" + cTable2 + ") AS cTable2 ";
     query += "ON cTable1.work_id == cTable2.work_id ";
     query += "WHERE cTable1.work_id == Books.title_id ";
@@ -238,6 +265,16 @@ function buildQuery(fields)
 
     //console.log(query);
     return query;
+}
+
+//Courtesy of http://stackoverflow.com/questions/280634/endswith-in-javascript
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+function serve_email_submit(request, response, ready)
+{
+
 }
 
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
@@ -251,9 +288,12 @@ function serve(request, response) {
     console.log(file);
     
     // If dynamic, handle it without sending an existing file because it doesn't exist.
-    if ((starts(file, '/library.html?') || starts(file, '/library-nojs.html?')) && (file.match(/\?/g) || []).length == 1)
+    if (starts(file, '/library.html?') && (file.match(/\?/g) || []).length == 1)
     {
-        serve_dynamic_html(request, response);
+        if(endsWith(file, "submit=Search"))
+            serve_search(request, response, ready);
+        //else if (endsWith(file, "submit=Request+books"))
+
         return;
     }
 
@@ -275,7 +315,6 @@ function serve(request, response) {
     }
     else if (isImage(type))
     {
-        console.log("Got an image");
         file = '/images' + file;
     }
 
@@ -394,16 +433,6 @@ function failTest(s) {
     process.exit(1);
 }
 
-function createRow(book)
-{
-    var row = "<td><input type=\"submit\" name=\"submit\" id=\"submitrequest\"/>"
-    row += "<td>" + book.author + "</td>"
-    row += "<td>" + book.published.toString() + "</td>"
-    row += "<td>" + book.illustrated + "</td>"
-    row += "</tr>"
-    return row;
-}
-
 // A dummy key and certificate are provided for https.
 // They should not be used on a public site because they are insecure.
 // They are effectively public, which private keys should never be.
@@ -442,5 +471,9 @@ var cert =
     "xQMaMCUsZCWPP3ujKAVL7m3HY2FQ7EJBVoqvSvqSaHfnhog3WpgdyMw=\n" +
     "-----END CERTIFICATE-----\n";
 
+
+var tempReading = fs.readFileSync("./private/library-dynamic.html", 'utf8').split('<HOOK/>');
+dynamicHtmlPagePart1 = tempReading[0];
+dynamicHtmlPagePart2 = tempReading[1];
 // Start everything going.
 start();
