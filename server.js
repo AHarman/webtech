@@ -71,11 +71,10 @@ function isImage(type) {
     }
 }
 
-function dberr(e)
+function dbCallBack(e)
 {
     if(e)
     {
-        console.log("8");
         console.log(e.message);
         throw e;
     }
@@ -114,7 +113,9 @@ function serve_dynamic_html(request, response)
     }
     
     var query = buildQuery(fields);
-    db.run(query, dberr);
+    //TODO: Write the prepare stuff to sanitize
+    //TODO: This should be db.each or db.all
+    db.run(query, dbCallBack);
 }
 
 function buildQuery(fields)
@@ -164,40 +165,40 @@ function buildQuery(fields)
         posthumous = false;
 
     query = "SELECT * FROM Books, Works, Authors WHERE ";
-    query += "Books.title_id == Works.id, ";
-    query += "Works.author_id = Authors.id, ";
+    query += "Books.title_id == Works.id AND ";
+    query += "Works.author_id == Authors.id";
     if (fields.title.length > 0)
-        query += "Works.title LIKE '%" + fields.title + "%', ";
+        query += " AND Works.title LIKE '%" + fields.title + "%'";
     if (fields.author.length > 0 && ! writtenByTolkien)
-        query += "Works.author LIKE '%" + fields.author + "%', ";
+        query += " AND Works.author LIKE '%" + fields.author + "%'";
     if (fields.collaborator.length > 0)
-        query += "Works.title LIKE '%" + fields.collaborator + "%', ";
+        query += " AND Works.title LIKE '%" + fields.collaborator + "%'";
 
     //Have to be specific as we're using null as "don't care"
     if (writtenByTolkien == true)
-        query += "Authors.name == 'J. R. R. Tolkien', ";
+        query += " AND Authors.name == 'J. R. R. Tolkien'";
     else if(writtenByTolkien == false)
-        query += "Authors.name != 'J. R. R. Tolkien', ";
+        query += " AND Authors.name != 'J. R. R. Tolkien'";
     
     if (setInArda == true)
-        query += "Works.inArda == 1, ";
+        query += " AND Works.inArda == 1";
     else if (setInArda == false)
-        query += "Works.inArda == 0, ";
+        query += " AND Works.inArda == 0";
     
     if (meta == true)
-        query += "Works.meta == 1, ";
+        query += " AND Works.meta == 1";
     else if (meta == false)
-        query += "Works.meta == 0, ";
+        query += " AND Works.meta == 0";
     
     if (illustrated == true)
-        query += "Books.illustrated == 1, ";
+        query += " AND Books.illustrated == 1";
     else if (illustrated == false)
-        query += "Books.illustrated == 0, ";
+        query += " AND Books.illustrated == 0";
     
     if (posthumous == true)
-        query += "Books.posthumous == 1";
+        query += " AND Books.posthumous == 1";
     else if (posthumous == false)
-        query += "Books.posthumous == 0";
+        query += " AND Books.posthumous == 0";
 
     query = query.trim();
     if(query[query.length - 1] == ",")
