@@ -8,6 +8,7 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var path = require('path');
+var validator = require('validator');
 var sql = require("sqlite3").verbose();
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
@@ -116,9 +117,9 @@ function serve_search(request, response, callback)
     
     var query = buildQuery(fields);
     //TODO: Write the prepare stuff to sanitize
-    db.all(query, dbCallBack);
+    db.all(query, dbSearchCallBack);
 
-    function dbCallBack(e, rows)
+    function dbSearchCallBack(e, rows)
     {
         if (e)
             err(e);
@@ -272,10 +273,106 @@ function endsWith(str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
 
-function serve_email_submit(request, response, ready)
-{
 
+function serveIncorrectEmailPage(request, response, callback)
+{
+    return fail(response, Error);
 }
+
+function serveIncorrectBooking(request, response, callback)
+{
+    return fail(response, Error);
+}
+
+function serve_email_submit(request, response, callback)
+{
+    var file = request.url;
+    split = file.split("?");
+    file = split[0];
+    params = split[1].split("&");
+
+    var fields = {email: "", books: []};
+
+    var temp = params[params.length - 2].split("=");
+    if(temp.length != 2)
+        return fail(response, Error);
+    temp = temp[1].split("%40");
+    temp = temp[0] + "@" + temp["1"];
+
+    if(validator.isEmail(temp))
+        fields.email = temp;
+    else
+        return fail(response, Error);
+
+    for (var i = 0; i < params.length - 2; i++)
+    {
+
+        if(params[i].match(/^check[0-9]+=on$/) == null)
+            return fail(response, Error);
+        temp = params[i].split("=")[0];
+        temp = temp.substring(5, temp.length);
+        fields.books[i] = parseInt(temp, 10);
+    }
+    if (fields.books.length == 0)
+    {
+        serveIncorrectBooking(request, response, callback);
+        return;
+    }
+
+
+    //Check books are available
+    var worksTable = "SELECT * FROM Works WHERE ("
+    for (var i = 0; i < fields.books.length; i++)
+        worksTable += "Works.id == " + fields.books[i] + " OR ";
+    worksTable = worksTable.substring(0, worksTable.length - 4) + ")";
+
+    var query = "SELECT worksTable.id AS work_id, COUNT(Books.id) AS availabe ";
+    query += "FROM (" + worksTable + ") AS worksTable, Books ";
+    query += "WHERE Books.title_id = worksTable.id AND ";
+    query += "Books.id  NOT IN (SELECT book_id AS id FROM Loans) ";
+    query += "GROUP BY worksTable.id";
+    db.all(query, CheckAvailabilityCallBack);
+
+    function CheckAvailabilityCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+
+        for (var i = 0; i < rows.length; i++)
+        {
+            if (rows.availabe < 1)
+            {
+                serveIncorrectBooking(request, response, callback);
+                return;
+            }
+        }
+        var query = "SELECT Members.email FROM Members WHERE Members.email = '" + fields.email + "'";
+        db.all(query, checkEmailCallBack);
+    }
+    
+
+    
+
+    function checkEmailCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+
+        if(rows.length != 1)
+        {
+            serveFailedEmailPage(request, response, ready);
+            return;
+        }
+
+        var query = "INSERT INTO Loans (member_email, book_id) SELECT '" + fields.email + "', MIN(Books.id) ";
+        query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
+        db.run(query, err);
+        return redirect(response, "/request-complete.html");
+    }
+}
+
+
+
 
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
 // that every URL should start with the prefix.  A URL ending with / is treated
@@ -292,8 +389,8 @@ function serve(request, response) {
     {
         if(endsWith(file, "submit=Search"))
             serve_search(request, response, ready);
-        //else if (endsWith(file, "submit=Request+books"))
-
+        else if (endsWith(file, "submit=Request+books"))
+            serve_email_submit(request, response, ready);
         return;
     }
 
