@@ -9,10 +9,27 @@ var https = require('https');
 var fs = require('fs');
 var path = require('path');
 var validator = require('validator');
+var nodemailer = require('nodemailer');
 var sql = require("sqlite3").verbose();
+
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
 var dynamicHtmlPagePart2 = "";
+
+var transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: 'EXAMPLEEMAIL1@gmail.com',
+        pass: 'PASS'
+    }
+});
+
+var mailOptions = {
+    from: 'EXAMPLEEMAIL1@gmail.com',
+    to: ,
+    subject: 'Book reservation',
+    text: ''
+};
 
 // The default port numbers are the standard ones [80,443] for convenience.
 // Change them to e.g. [8080,8443] to avoid privilege or clash problems.
@@ -328,7 +345,8 @@ function serve_email_submit(request, response, callback)
         worksTable += "Works.id == " + fields.books[i] + " OR ";
     worksTable = worksTable.substring(0, worksTable.length - 4) + ")";
 
-    var query = "SELECT worksTable.id AS work_id, COUNT(Books.id) AS availabe ";
+    var titles = [];
+    var query = "SELECT worksTable.id AS work_id, worksTable.title AS title, COUNT(Books.id) AS availabe ";
     query += "FROM (" + worksTable + ") AS worksTable, Books ";
     query += "WHERE Books.title_id = worksTable.id AND ";
     query += "Books.id  NOT IN (SELECT book_id AS id FROM Loans) ";
@@ -339,7 +357,7 @@ function serve_email_submit(request, response, callback)
     {
         if (e)
             err(e);
-
+        console.log(rows);
         for (var i = 0; i < rows.length; i++)
         {
             if (rows.availabe < 1)
@@ -347,6 +365,8 @@ function serve_email_submit(request, response, callback)
                 serveIncorrectBooking(request, response, callback);
                 return;
             }
+            else
+                titles.push(rows[i].title);
         }
         var query = "SELECT Members.email FROM Members WHERE Members.email = '" + fields.email + "'";
         db.all(query, checkEmailCallBack);
@@ -365,8 +385,21 @@ function serve_email_submit(request, response, callback)
 
         var query = "INSERT INTO Loans (member_email, book_id) SELECT '" + fields.email + "', MIN(Books.id) ";
         query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
-        db.run(query, err);
+        db.run(query, newLoanCompleteCallBack);
         return redirect(response, "/request-complete.html");
+    }
+    function newLoanCompleteCallBack(e)
+    {
+        mailOptions.to = fields.email;
+        mailOptions.text = fields.email + " has reserved: \n";
+        for (var i = 0; i < titles.length; i++)
+            mailOptions.text += titles[i] + "\n";
+        console.log(mailOptions);
+        transporter.sendMail(mailOptions, function(error, info){
+            if(error)
+                return console.log(error);
+            console.log('Message sent: ' + info.response);
+        });
     }
 }
 
