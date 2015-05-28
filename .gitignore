@@ -1,2 +1,4 @@
 *~
+private/emailcredentials
 *.swp
+node_modules
