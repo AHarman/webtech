@@ -15,18 +15,19 @@ var sql = require("sqlite3").verbose();
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
 var dynamicHtmlPagePart2 = "";
+var emailCreds = fs.readFileSync("private/emailcreds.nogit", "utf8").split(/\r?\n/);
 
 var transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
-        user: 'EXAMPLEEMAIL1@gmail.com',
-        pass: 'PASS'
+        user: emailCreds[0],
+        pass: emailCreds[1]
     }
 });
 
 var mailOptions = {
-    from: 'EXAMPLEEMAIL1@gmail.com',
-    to: ,
+    from: emailCreds[0],
+    to: "",
     subject: 'Book reservation',
     text: ''
 };
@@ -565,6 +566,7 @@ function failTest(s) {
 // A dummy key and certificate are provided for https.
 // They should not be used on a public site because they are insecure.
 // They are effectively public, which private keys should never be.
+// These are still Holyer's ones
 var key =
     "-----BEGIN RSA PRIVATE KEY-----\n" +
     "MIICXAIBAAKBgQDGkGjkLwOG9gkuaBFj12n+dLc+fEFk1ns60vsE1LNTDtqe87vj\n" +
