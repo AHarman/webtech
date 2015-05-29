@@ -15,7 +15,7 @@ var sql = require("sqlite3").verbose();
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
 var dynamicHtmlPagePart2 = "";
-var emailCreds = fs.readFileSync("private/emailcreds.nogit", "utf8").split(/\r?\n/);
+var emailCreds = fs.readFileSync("private/emailcredentials", "utf8").split(/\r?\n/);
 
 var transporter = nodemailer.createTransport({
     service: 'Gmail',
