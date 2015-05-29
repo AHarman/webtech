@@ -137,7 +137,8 @@ function serve_search(request, response, callback)
     //TODO: Write the prepare stuff to sanitize
     if(query == null)
         return redirect(response, "/booking-problem.html");
-    db.all(query, dbSearchCallBack);
+    console.log(query);
+    db.all(query.sql, query.vars, dbSearchCallBack);
 
     function dbSearchCallBack(e, rows)
     {
@@ -221,17 +222,26 @@ function buildQuery(fields)
         posthumous = false;
 
     //Build initial table that has all possible works the user might want
+    var params = {};
     var ctable1 = "";
     cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS author ";
-    //cTable1 = "SELECT Works.id AS work_id ";
     cTable1 += "FROM Works, Authors WHERE ";
     cTable1 += "Works.author_id == Authors.id";
     if (fields.title.length > 0)
-        cTable1 += " AND Works.title LIKE '%" + fields.title + "%'";
+    {
+        params.$title = fields.title;
+        cTable1 += " AND instr(UPPER(Works.title), UPPER($title))";
+    }
     if (fields.author.length > 0 && ! writtenByTolkien)
-        cTable1 += " AND Authors.name LIKE '%" + fields.author + "%'";
+    {
+        params.$author = fields.author;
+        cTable1 += " AND instr(UPPER(Authors.name), UPPER($author))";
+    }
     if (fields.collaborator.length > 0)
-        cTable1 += " AND Works.title LIKE '%" + fields.collaborator + "%'";
+    {
+        params.$collaborator = fields.collaborator;
+        cTable1 += " AND instr(UPPER(Works.collaborator), UPPER($collaborator))";
+    }
 
     //Have to be specific as we're using null as "don't care"
     if (writtenByTolkien == true)
@@ -282,10 +292,11 @@ function buildQuery(fields)
     query += "FROM Books, (" + cTable1 + ") AS cTable1 LEFT OUTER JOIN (" + cTable2 + ") AS cTable2 ";
     query += "ON cTable1.work_id == cTable2.work_id ";
     query += "WHERE cTable1.work_id == Books.title_id ";
-    query += "GROUP BY cTable1.work_id"
+    query += "GROUP BY cTable1.work_id";
 
-    //console.log(query);
-    return query;
+    console.log(params);
+    console.log(query);
+    return {sql: query, vars: params};
 }
 
 //Courtesy of http://stackoverflow.com/questions/280634/endswith-in-javascript
@@ -369,8 +380,8 @@ function serve_email_submit(request, response, callback)
             else
                 titles.push(rows[i].title);
         }
-        var query = "SELECT Members.email FROM Members WHERE Members.email = '" + fields.email + "'";
-        db.all(query, checkEmailCallBack);
+        var query = "SELECT Members.email FROM Members WHERE Members.email = ? ";
+        db.all(query, fields.email, checkEmailCallBack);
     }
 
     function checkEmailCallBack(e, rows)
@@ -384,9 +395,9 @@ function serve_email_submit(request, response, callback)
             return;
         }
 
-        var query = "INSERT INTO Loans (member_email, book_id) SELECT '" + fields.email + "', MIN(Books.id) ";
+        var query = "INSERT INTO Loans (member_email, book_id) SELECT ? , MIN(Books.id) ";
         query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
-        db.run(query, newLoanCompleteCallBack);
+        db.run(query, fields.email, newLoanCompleteCallBack);
         return redirect(response, "/request-complete.html");
     }
     function newLoanCompleteCallBack(e)
