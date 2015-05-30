@@ -11,6 +11,8 @@ var path = require('path');
 var validator = require('validator');
 var nodemailer = require('nodemailer');
 var sql = require("sqlite3").verbose();
+var requireURL = require('url');
+var querystring = require('querystring');
 
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
@@ -82,16 +84,6 @@ function fail(response, code) {
     response.end();
 }
 
-function isImage(type) {
-    switch(type) {
-        case "image/png":
-        case "image/jpg":
-            return true;
-        default:
-            return false;
-    }
-}
-
 function err(e)
 {
     if(e)
@@ -101,323 +93,6 @@ function err(e)
     }
 }
 
-function serve_search(request, response, callback)
-{
-    var file = request.url;
-
-    split = file.split("?");
-    file = split[0];
-    params = split[1].split("&");
-    fields = {  title: null,
-                author: null,
-                collaborator: null,
-                writtenByTolkien: null,
-                notWrittenByTolkien: null,
-                setInArda: null,
-                notSetInArda: null,
-                meta: null,
-                notMeta: null,
-                illustrated: null,
-                notIllustrated: null,
-                posthumous: null,
-                notPosthumous: null
-    };
-
-    var temp;
-    for (var i = 0; i < params.length; i++)
-    {
-        temp = params[i].split("=");
-        if (temp.length > 1 && temp[0] in fields && temp[1].length > 0)
-        {
-            fields[temp[0]] = temp[1].trim();
-        }
-    }
-    
-    var query = buildQuery(fields);
-    //TODO: Write the prepare stuff to sanitize
-    if(query == null)
-        return redirect(response, "/booking-problem.html");
-    console.log(query);
-    db.all(query.sql, query.vars, dbSearchCallBack);
-
-    function dbSearchCallBack(e, rows)
-    {
-        if (e)
-            err(e);
-
-        //console.log(rows);
-        var htmlRows = "<tr class=\"results-header\"><td></td><td class=\"title leftalign\">Title:</td><td>Author:</td><td>Published:</td><td>Illustrated:</td><td>Total Copies:</td><td>Available:</td></tr>";
-        for (var i = 0; i < rows.length; i++)
-        {
-            if(rows[i].reserved == null)
-                rows[i].reserved = 0;
-            //Do this by hand as it's fairly simple and we don't want to use external libraries
-            htmlRows +="<tr class=\"results-row ";
-            if(i % 2)
-                htmlRows += "parity0\">";
-            else
-                htmlRows += "parity1\">";
-            htmlRows += "<td class=\"checkcell\"><input type=\"checkbox\" name=\"check" + rows[i].work_id + "\" id=\"check" + rows[i].work_id +"\" /></td>";
-            htmlRows += "<td class=\"leftalign\">" + rows[i].title + "</td>";
-            htmlRows += "<td class=\"leftalign\">" + rows[i].author + "</td>";
-            htmlRows += "<td class=\"leftalign\">" + rows[i].published + "</td>";
-            if (rows[i].illustrated == 1)
-                htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./tick.png\" alt=\"true\" /></td>";
-            else
-                htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./cross.png\" alt=\"false\" /></td>";
-            htmlRows += "<td class=\"copiescell\">" + rows[i].totalCopies + "</td>";
-            htmlRows += "<td class=\"freecell\">" + (rows[i].totalCopies - rows[i].reserved) + "</td>";
-            htmlRows +="</tr>"
-        }
-
-        var page = dynamicHtmlPagePart1 + htmlRows + dynamicHtmlPagePart2;
-        callback(null, page);
-    }
-}
-
-function buildQuery(fields)
-{
-    var writtenByTolkien = null;
-    var setInArda = null;
-    var meta = null;
-    var illustrated = null;
-    var posthumous = null;
-
-    if (fields.writtenByTolkien == fields.notWrittenByTolkien && fields.writtenByTolkien == "on" ||
-        fields.setInArda        == fields.notSetInArda        && fields.setInArda        == "on" ||
-        fields.meta             == fields.notMeta             && fields.meta             == "on" ||
-        fields.illustrated      == fields.notIllustrated      && fields.illustrated      == "on" ||
-        fields.posthumous       == fields.notPosthumous       && fields.posthumous       == "on")
-        return null;
-    if(!fields.title)
-        fields.title = "";
-    if(!fields.author)
-        fields.author = "";
-    if(!fields.collaborator)
-        fields.collaborator = "";
-
-    if (fields.writtenByTolkien == "on")
-        writtenByTolkien = true;
-    else if (fields.notWrittenByTolkien == "on")
-        writtenByTolkien = false;
-    
-    if (fields.setInArda == "on")
-        setInArda = true;
-    else if (fields.notSetInArda == "on")
-        setInArda = false;
-
-    if (fields.meta == "on")
-        meta = true;
-    else if (fields.notMeta == "on")
-        meta = false;
-
-    if (fields.illustrated == "on")
-        illustrated = true;
-    else if (fields.notIllustrated == "on")
-        illustrated = false;
-
-    if (fields.posthumous == "on")
-        posthumous = true;
-    else if (fields.notPosthumous == "on")
-        posthumous = false;
-
-    //Build initial table that has all possible works the user might want
-    var params = {};
-    var ctable1 = "";
-    cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS author ";
-    cTable1 += "FROM Works, Authors WHERE ";
-    cTable1 += "Works.author_id == Authors.id";
-    if (fields.title.length > 0)
-    {
-        params.$title = fields.title;
-        cTable1 += " AND instr(UPPER(Works.title), UPPER($title))";
-    }
-    if (fields.author.length > 0 && ! writtenByTolkien)
-    {
-        params.$author = fields.author;
-        cTable1 += " AND instr(UPPER(Authors.name), UPPER($author))";
-    }
-    if (fields.collaborator.length > 0)
-    {
-        params.$collaborator = fields.collaborator;
-        cTable1 += " AND instr(UPPER(Works.collaborator), UPPER($collaborator))";
-    }
-
-    //Have to be specific as we're using null as "don't care"
-    if (writtenByTolkien == true)
-        cTable1 += " AND Authors.name == 'J. R. R. Tolkien'";
-    else if(writtenByTolkien == false)
-        cTable1 += " AND Authors.name != 'J. R. R. Tolkien'";
-    
-    if (setInArda == true)
-        cTable1 += " AND Works.inArda == 1";
-    else if (setInArda == false)
-        cTable1 += " AND Works.inArda == 0";
-    
-    if (meta == true)
-        cTable1 += " AND Works.meta == 1";
-    else if (meta == false)
-        cTable1 += " AND Works.meta == 0";
-    
-    if (illustrated == true)
-        cTable1 += " AND Books.illustrated == 1";
-    else if (illustrated == false)
-        cTable1 += " AND Books.illustrated == 0";
-    
-    if (posthumous == true)
-        cTable1 += " AND Books.posthumous == 1";
-    else if (posthumous == false)
-        cTable1 += " AND Books.posthumous == 0";
-
-    cTable1 = cTable1.trim();
-    if(cTable1[cTable1.length - 1] == ",")
-        cTable1 = cTable1.substring(0, cTable1.length - 1);
-
-    //Get a count of how many of each work is currently taken out.
-    var cTable2 = "";
-    cTable2  = "SELECT Works.id as work_id, COUNT(Books.id) AS reserved ";
-    cTable2 += "FROM Works, Books ";
-    cTable2 += "WHERE Works.id == Books.title_id AND ";
-    cTable2 += "Books.id IN (SELECT book_id FROM Loans) ";
-    cTable2 += "GROUP BY Works.id";
-
-    var query = "";
-    query  = "SELECT cTable1.work_id AS work_id, ";
-    query += "cTable1.title AS title, ";
-    query += "cTable1.published AS published, ";
-    query += "cTable1.illustrated AS illustrated, ";
-    query += "cTable1.author AS author, ";
-    query += "COUNT(Books.title_id) AS totalCopies, ";
-    query += "cTable2.reserved AS reserved ";
-    query += "FROM Books, (" + cTable1 + ") AS cTable1 LEFT OUTER JOIN (" + cTable2 + ") AS cTable2 ";
-    query += "ON cTable1.work_id == cTable2.work_id ";
-    query += "WHERE cTable1.work_id == Books.title_id ";
-    query += "GROUP BY cTable1.work_id";
-
-    console.log(params);
-    console.log(query);
-    return {sql: query, vars: params};
-}
-
-//Courtesy of http://stackoverflow.com/questions/280634/endswith-in-javascript
-function endsWith(str, suffix) {
-    return str.indexOf(suffix, str.length - suffix.length) !== -1;
-}
-
-
-function serveIncorrectEmailPage(request, response, callback)
-{
-    return redirect(response, "/booking-problem.html");
-}
-
-function serveIncorrectBooking(request, response, callback)
-{
-    return fail(response, Error);
-}
-
-function serve_email_submit(request, response, callback)
-{
-    var file = request.url;
-    split = file.split("?");
-    file = split[0];
-    params = split[1].split("&");
-
-    var fields = {email: "", books: []};
-
-    var temp = params[params.length - 2].split("=");
-    if(temp.length != 2)
-        return booking-problem.html
-    temp = temp[1].split("%40");
-    temp = temp[0] + "@" + temp["1"];
-
-    if(validator.isEmail(temp))
-        fields.email = temp;
-    else
-        return redirect(response, "/invalid-email.html");
-
-    for (var i = 0; i < params.length - 2; i++)
-    {
-
-        if(params[i].match(/^check[0-9]+=on$/) == null)
-            return fail(response, Error);
-        temp = params[i].split("=")[0];
-        temp = temp.substring(5, temp.length);
-        fields.books[i] = parseInt(temp, 10);
-    }
-    if (fields.books.length == 0)
-    {
-        serveIncorrectBooking(request, response, callback);
-        return;
-    }
-
-
-    //Check books are available
-    var worksTable = "SELECT * FROM Works WHERE ("
-    for (var i = 0; i < fields.books.length; i++)
-        worksTable += "Works.id == " + fields.books[i] + " OR ";
-    worksTable = worksTable.substring(0, worksTable.length - 4) + ")";
-
-    var titles = [];
-    var query = "SELECT worksTable.id AS work_id, worksTable.title AS title, COUNT(Books.id) AS availabe ";
-    query += "FROM (" + worksTable + ") AS worksTable, Books ";
-    query += "WHERE Books.title_id = worksTable.id AND ";
-    query += "Books.id  NOT IN (SELECT book_id AS id FROM Loans) ";
-    query += "GROUP BY worksTable.id";
-    db.all(query, CheckAvailabilityCallBack);
-
-    function CheckAvailabilityCallBack(e, rows)
-    {
-        if (e)
-            err(e);
-        console.log(rows);
-        for (var i = 0; i < rows.length; i++)
-        {
-            if (rows.availabe < 1)
-            {
-                serveIncorrectBooking(request, response, callback);
-                return;
-            }
-            else
-                titles.push(rows[i].title);
-        }
-        var query = "SELECT Members.email FROM Members WHERE Members.email = ? ";
-        db.all(query, fields.email, checkEmailCallBack);
-    }
-
-    function checkEmailCallBack(e, rows)
-    {
-        if (e)
-            err(e);
-
-        if(rows.length != 1)
-        {
-            serveFailedEmailPage(request, response, ready);
-            return;
-        }
-
-        var query = "INSERT INTO Loans (member_email, book_id) SELECT ? , MIN(Books.id) ";
-        query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
-        db.run(query, fields.email, newLoanCompleteCallBack);
-        return redirect(response, "/request-complete.html");
-    }
-    function newLoanCompleteCallBack(e)
-    {
-        mailOptions.to = fields.email;
-        mailOptions.text = fields.email + " has reserved: \n";
-        for (var i = 0; i < titles.length; i++)
-            mailOptions.text += titles[i] + "\n";
-        console.log(mailOptions);
-        transporter.sendMail(mailOptions, function(error, info){
-            if(error)
-                return console.log(error);
-            console.log('Message sent: ' + info.response);
-        });
-    }
-}
-
-
-
-
 // Serve a single request.  Redirect / to add the prefix, but otherwise insist
 // that every URL should start with the prefix.  A URL ending with / is treated
 // as a folder and index.html is added.  A file name without an extension is
@@ -425,17 +100,19 @@ function serve_email_submit(request, response, callback)
 // meant to be a folder, it would inefficiently have to be redirected for the
 // browser to get relative links right).
 function serve(request, response) {
-    var file = request.url;
-    console.log(file);
+    var url = requireURL.parse(request.url);
+    var file = url.pathname;
     
     // If dynamic, handle it without sending an existing file because it doesn't exist.
-    if (starts(file, '/library.html?') && (file.match(/\?/g) || []).length == 1)
+    if (url.search != null)
     {
-        if(endsWith(file, "submit=Search"))
-            serve_search(request, response, ready);
-        else if (endsWith(file, "submit=Request+books"))
-            serve_email_submit(request, response, ready);
-        return;
+        var params = querystring.parse(url.query);
+        if (file == "/library.html" && params.hasOwnProperty("submit") && params["submit"] == "Search")
+            return serveSearchForBooks(request, response, sendResponse);
+        else if (file == "/library.html" && params.hasOwnProperty("submit") && params["submit"] == "Request books")
+            return serveEmailSubmit(request, response, sendResponse);
+        else
+            return fail(response, NotFound);
     }
 
     if (file == '/')
@@ -483,12 +160,312 @@ function serve(request, response) {
         return fail(response, NotFound);
     }
 
-    try { fs.readFile(file, ready); }
+    try { fs.readFile(file, sendResponse); }
     catch (err) { return fail(response, Error); }
 
-    function ready(error, content) {
+    function sendResponse(error, content) {
         if (error) return fail(response, NotFound);
         succeed(response, type, content);
+    }
+}
+
+
+function serveSearchForBooks(request, response, sendResponse)
+{
+    var fields = createBookSearchObject(request.url);
+    var query = buildQuery(fields);
+    
+    if(query == null)
+        return redirect(response, "/booking-problem.html");
+    db.all(query.sql, query.vars, dbSearchCallBack);
+
+    function dbSearchCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+
+        var htmlRows = buildHTMLRows(rows);
+        var page = dynamicHtmlPagePart1 + htmlRows + dynamicHtmlPagePart2;
+        sendResponse(null, page);
+    }
+}
+
+function serveIncorrectEmailPage(request, response, sendResponse)
+{
+    return redirect(response, "/booking-problem.html");
+}
+
+function serveIncorrectBooking(request, response, sendResponse)
+{
+    return fail(response, Error);
+}
+
+function serveEmailSubmit(request, response, sendResponse)
+{
+    var fields = {email: "", books: []};
+    var params = querystring.parse(requireURL.parse(request.url).query);
+    
+    if (!params.hasOwnProperty("email"))
+        return serveIncorrectBooking(request, response, sendResponse);
+      
+    if(validator.isEmail(params.email))
+        fields.email = params.email;
+    else
+        return serveIncorrectEmailPage(request, response, sendResponse);
+    
+    
+    var keys = Object.keys(params);
+    for (var i = 0; i < keys.length; i++)
+    {
+        if (keys[i].match(/^check[0-9]+$/))
+            fields.books.push(parseInt(keys[i].substring(5, keys[i].length), 10));
+    }
+
+    if (fields.books.length == 0)
+        return serveIncorrectBooking(request, response, sendResponse);
+
+    //Check books are available
+    var worksTable = "SELECT * FROM Works WHERE ("
+    for (var i = 0; i < fields.books.length; i++)
+        worksTable += "Works.id == " + fields.books[i] + " OR ";
+    worksTable = worksTable.substring(0, worksTable.length - 4) + ")";
+
+    var titles = [];
+    var query = "SELECT worksTable.id AS work_id, worksTable.title AS title, COUNT(Books.id) AS availabe ";
+    query += "FROM (" + worksTable + ") AS worksTable, Books ";
+    query += "WHERE Books.title_id = worksTable.id AND ";
+    query += "Books.id  NOT IN (SELECT book_id AS id FROM Loans) ";
+    query += "GROUP BY worksTable.id";
+    db.all(query, CheckAvailabilityCallBack);
+
+    function CheckAvailabilityCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+        
+        for (var i = 0; i < rows.length; i++)
+        {
+            if (rows.availabe < 1)
+                return serveIncorrectBooking(request, response, sendResponse);
+            else
+                titles.push(rows[i].title);
+        }
+        var query = "SELECT Members.email FROM Members WHERE Members.email = ? ";
+        db.all(query, fields.email, checkEmailCallBack);
+    }
+
+    function checkEmailCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+
+        if(rows.length != 1)
+            return serveIncorrectEmailPage(request, response, sendResponse);
+
+        var query = "INSERT INTO Loans (member_email, book_id) SELECT ? , MIN(Books.id) ";
+        query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
+        db.run(query, fields.email, newLoanCompleteCallBack);
+        return redirect(response, "/request-complete.html");
+    }
+
+    function newLoanCompleteCallBack(e)
+    {
+        mailOptions.to = fields.email;
+        mailOptions.text = fields.email + " has reserved: \n";
+        for (var i = 0; i < titles.length; i++)
+            mailOptions.text += titles[i] + "\n";
+        console.log(mailOptions);
+        transporter.sendMail(mailOptions, function(error, info){
+            if(error)
+                return console.log(error);
+            console.log('Message sent: ' + info.response);
+        });
+    }
+}
+
+function serveIncorrectEmailPage(request, response, callback)
+{
+        return redirect(response, "/invalid-email.html");
+}
+
+function serveIncorrectBooking(request, response, callback)
+{
+        return redirect(response, "/booking-problem.html");
+}
+
+function createBookSearchObject(url)
+{
+    var params = querystring.parse(requireURL.parse(url).query);
+   
+    var fields = {  title: "",
+                    author: "",
+                    collaborator: "",
+                    writtenByTolkien: null,
+                    setInArda: null,
+                    meta: null,
+                    illustrated: null,
+                    posthumous: null
+    };
+    
+    var keys = Object.keys(params);
+    for (var i = 0; i < keys.length; i++)
+    {
+        switch(keys[i])
+        {
+            case "title":
+                fields.title = params.title;
+                break;
+            case "author":
+                fields.author = params.author;
+                break;
+            case "collaborator":
+                fields.collaborator = params.collaborator;
+                break;
+            case "writtenByTolkien":
+                fields.writtenByTolkien = true;
+                break;
+            case "notWrittenByTolkien":
+                fields.writtenByTolkien = false;
+                break;
+            case "setInArda":
+                fields.setInArda = true;
+                break;
+            case "notSetInArda":
+                fields.setInArda = false;
+                break;
+            case "meta":
+                fields.meta = true;
+                break;
+            case "notMeta":
+                fields.meta = false;
+                break;
+            case "illustrated":
+                fields.illustrated = true;
+                break;
+            case "notIllustrated":
+                fields.illustrated = false;
+                break;
+            case "posthumous":
+                fields.posthumous = true;
+                break;
+            case "notPosthumous":
+                fields.posthumous = false;
+                break;
+        }
+    }
+    return fields;
+}
+
+function buildQuery(fields)
+{
+    //Build initial table that has all possible works the user might want
+    var params = {};
+    var ctable1 = "";
+    cTable1 = "SELECT Works.id AS work_id, Works.title, published, illustrated, Authors.name AS author ";
+    cTable1 += "FROM Works, Authors WHERE ";
+    cTable1 += "Works.author_id == Authors.id";
+    if (fields.title.length > 0)
+    {
+        params.$title = fields.title;
+        cTable1 += " AND instr(UPPER(Works.title), UPPER($title))";
+    }
+    if (fields.author.length > 0 && ! fields.writtenByTolkien)
+    {
+        params.$author = fields.author;
+        cTable1 += " AND instr(UPPER(Authors.name), UPPER($author))";
+    }
+    if (fields.collaborator.length > 0)
+    {
+        params.$collaborator = fields.collaborator;
+        cTable1 += " AND instr(UPPER(Works.collaborator), UPPER($collaborator))";
+    }
+
+    //Have to be specific as we're using null as "don't care"
+    if (fields.writtenByTolkien == true)
+        cTable1 += " AND Authors.name == 'J. R. R. Tolkien'";
+    else if(fields.writtenByTolkien == false)
+        cTable1 += " AND Authors.name != 'J. R. R. Tolkien'";
+    
+    if (fields.setInArda == true)
+        cTable1 += " AND Works.inArda == 1";
+    else if (fields.setInArda == false)
+        cTable1 += " AND Works.inArda == 0";
+    
+    if (fields.meta == true)
+        cTable1 += " AND Works.meta == 1";
+    else if (fields.meta == false)
+        cTable1 += " AND Works.meta == 0";
+    
+    if (fields.illustrated == true)
+        cTable1 += " AND Works.illustrated == 1";
+    else if (fields.illustrated == false)
+        cTable1 += " AND Works.illustrated == 0";
+    
+    if (fields.posthumous == true)
+        cTable1 += " AND Works.posthumous == 1";
+    else if (fields.posthumous == false)
+        cTable1 += " AND Works.posthumous == 0";
+
+    //Get a count of how many of each work is currently taken out.
+    var cTable2 = "";
+    cTable2  = "SELECT Works.id as work_id, COUNT(Books.id) AS reserved ";
+    cTable2 += "FROM Works, Books ";
+    cTable2 += "WHERE Works.id == Books.title_id AND ";
+    cTable2 += "Books.id IN (SELECT book_id FROM Loans) ";
+    cTable2 += "GROUP BY Works.id";
+
+    var query = "";
+    query  = "SELECT cTable1.work_id AS work_id, ";
+    query +=        "cTable1.title AS title, ";
+    query +=        "cTable1.published AS published, ";
+    query +=        "cTable1.illustrated AS illustrated, ";
+    query +=        "cTable1.author AS author, ";
+    query +=        "COUNT(Books.title_id) AS totalCopies, ";
+    query +=        "cTable2.reserved AS reserved ";
+    query += "FROM Books, (" + cTable1 + ") AS cTable1 LEFT OUTER JOIN (" + cTable2 + ") AS cTable2 ";
+    query += "ON cTable1.work_id == cTable2.work_id ";
+    query += "WHERE cTable1.work_id == Books.title_id ";
+    query += "GROUP BY cTable1.work_id";
+
+    return {sql: query, vars: params};
+}
+
+function buildHTMLRows(rows)
+{
+
+    var htmlRows = "<tr class=\"results-header\"><td></td><td class=\"title leftalign\">Title:</td><td>Author:</td><td>Published:</td><td>Illustrated:</td><td>Total Copies:</td><td>Available:</td></tr>";
+    for (var i = 0; i < rows.length; i++)
+    {
+        if(rows[i].reserved == null)
+            rows[i].reserved = 0;
+        //Do this by hand as it's fairly simple and we don't want to use external libraries
+        htmlRows +="<tr class=\"results-row ";
+        if(i % 2)
+            htmlRows += "parity0\">";
+        else
+            htmlRows += "parity1\">";
+        htmlRows += "<td class=\"checkcell\"><input type=\"checkbox\" name=\"check" + rows[i].work_id + "\" id=\"check" + rows[i].work_id +"\" /></td>";
+        htmlRows += "<td class=\"leftalign\">" + rows[i].title + "</td>";
+        htmlRows += "<td class=\"leftalign\">" + rows[i].author + "</td>";
+        htmlRows += "<td class=\"leftalign\">" + rows[i].published + "</td>";
+        if (rows[i].illustrated == 1)
+            htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./tick.png\" alt=\"true\" /></td>";
+        else
+            htmlRows += "<td class=\"illustratedcell\"><img class=\"icon\" src=\"./cross.png\" alt=\"false\" /></td>";
+        htmlRows += "<td class=\"copiescell\">" + rows[i].totalCopies + "</td>";
+        htmlRows += "<td class=\"freecell\">" + (rows[i].totalCopies - rows[i].reserved) + "</td>";
+        htmlRows +="</tr>"
+    }
+    return htmlRows;
+}
+
+function isImage(type) {
+    switch(type) {
+        case "image/png":
+        case "image/jpg":
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -509,10 +486,6 @@ function findType(request, extension) {
 
     return htmlTypes[0];
 }
-
-// Check whether a string starts with a prefix, or ends with a suffix
-function starts(s, x) { return s.lastIndexOf(x, 0) == 0; }
-function ends(s, x) { return s.indexOf(x, s.length-x.length) == 0; }
 
 // Check that a file is inside the site.  This is essential for security.
 var site = fs.realpathSync('.') + path.sep;
@@ -573,6 +546,15 @@ function failTest(s) {
     console.log(s);
     process.exit(1);
 }
+
+//Courtesy of http://stackoverflow.com/questions/280634/endswith-in-javascript
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+// Check whether a string starts with a prefix, or ends with a suffix
+function starts(s, x) { return s.lastIndexOf(x, 0) == 0; }
+function ends(s, x) { return s.indexOf(x, s.length-x.length) == 0; }
 
 // A dummy key and certificate are provided for https.
 // They should not be used on a public site because they are insecure.
