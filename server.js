@@ -202,27 +202,9 @@ function serveIncorrectBooking(request, response, sendResponse)
 
 function serveEmailSubmit(request, response, sendResponse)
 {
-    var fields = {email: "", books: []};
-    var params = querystring.parse(requireURL.parse(request.url).query);
-    
-    if (!params.hasOwnProperty("email"))
-        return serveIncorrectBooking(request, response, sendResponse);
-      
-    if(validator.isEmail(params.email))
-        fields.email = params.email;
-    else
-        return serveIncorrectEmailPage(request, response, sendResponse);
-    
-    
-    var keys = Object.keys(params);
-    for (var i = 0; i < keys.length; i++)
-    {
-        if (keys[i].match(/^check[0-9]+$/))
-            fields.books.push(parseInt(keys[i].substring(5, keys[i].length), 10));
-    }
-
-    if (fields.books.length == 0)
-        return serveIncorrectBooking(request, response, sendResponse);
+    var fields = parseBookRequestParams(querystring.parse(requireURL.parse(request.url).query));
+    if (fields == null)
+        return;
 
     //Check books are available
     var worksTable = "SELECT * FROM Works WHERE ("
@@ -270,6 +252,9 @@ function serveEmailSubmit(request, response, sendResponse)
 
     function newLoanCompleteCallBack(e)
     {
+        if (e)
+            err(e);
+
         mailOptions.to = fields.email;
         mailOptions.text = fields.email + " has reserved: \n";
         for (var i = 0; i < titles.length; i++)
@@ -459,7 +444,8 @@ function buildHTMLRows(rows)
     return htmlRows;
 }
 
-function isImage(type) {
+function isImage(type) 
+{
     switch(type) {
         case "image/png":
         case "image/jpg":
@@ -467,6 +453,42 @@ function isImage(type) {
         default:
             return false;
     }
+}
+
+//Pass in a querystring object
+function parseBookRequestParams(query) 
+{
+    var fields = {email: "", books: []};
+    var params = querystring.parse(query);
+    
+    if (!params.hasOwnProperty("email"))
+    {
+        serveIncorrectBooking(request, response, sendResponse);
+        return null;
+    }
+      
+    if(validator.isEmail(params.email))
+        fields.email = params.email;
+    else
+    {
+        serveIncorrectEmailPage(request, response, sendResponse);
+        return null;
+    }
+    
+    
+    var keys = Object.keys(params);
+    for (var i = 0; i < keys.length; i++)
+    {
+        if (keys[i].match(/^check[0-9]+$/))
+            fields.books.push(parseInt(keys[i].substring(5, keys[i].length), 10));
+    }
+
+    if (fields.books.length == 0)
+    {
+        serveIncorrectBooking(request, response, sendResponse);
+        return null;
+    }
+    return fields;
 }
 
 // Find the content type (MIME type) to respond with.
