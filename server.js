@@ -13,6 +13,7 @@ var nodemailer = require('nodemailer');
 var sql = require("sqlite3").verbose();
 var requireURL = require('url');
 var querystring = require('querystring');
+var uuid = require('uuid');
 
 var db = new sql.Database("private/tolkien.db", sql.OPEN_READWRITE);
 var dynamicHtmlPagePart1 = "";
@@ -27,7 +28,7 @@ var transporter = nodemailer.createTransport({
     }
 });
 
-var mailOptions = {
+var defaultMailOptions = {
     from: emailCreds[0],
     to: "",
     subject: 'Book reservation',
@@ -113,6 +114,10 @@ function serve(request, response) {
             return serveEmailSubmit(request, response, sendResponse);
         else
             return fail(response, NotFound);
+    }
+    else if (starts(file, '/confirm/'))
+    {
+        return serveConfirmationLink(request, response, sendResponse);
     }
 
     if (file == '/')
@@ -202,10 +207,12 @@ function serveIncorrectBooking(request, response, sendResponse)
 
 function serveEmailSubmit(request, response, sendResponse)
 {
-    var fields = parseBookRequestParams(querystring.parse(requireURL.parse(request.url).query));
+    var fields = parseBookRequestParams(request, response, sendResponse, querystring.parse(requireURL.parse(request.url).query));
+    var newUuid = uuid.v4();
+
     if (fields == null)
         return;
-
+    
     //Check books are available
     var worksTable = "SELECT * FROM Works WHERE ("
     for (var i = 0; i < fields.books.length; i++)
@@ -243,39 +250,58 @@ function serveEmailSubmit(request, response, sendResponse)
 
         if(rows.length != 1)
             return serveIncorrectEmailPage(request, response, sendResponse);
-
-        var query = "INSERT INTO Loans (member_email, book_id) SELECT ? , MIN(Books.id) ";
+        var query = "INSERT INTO Loans (member_email, book_id, uuid) SELECT ? , MIN(Books.id), ? ";
         query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
-        db.run(query, fields.email, newLoanCompleteCallBack);
+        db.run(query, [fields.email, newUuid], reservationPlacedCallback);
         return redirect(response, "/request-complete.html");
     }
 
-    function newLoanCompleteCallBack(e)
+    function reservationPlacedCallback(e)
     {
         if (e)
             err(e);
-
-        mailOptions.to = fields.email;
-        mailOptions.text = fields.email + " has reserved: \n";
-        for (var i = 0; i < titles.length; i++)
-            mailOptions.text += titles[i] + "\n";
-        console.log(mailOptions);
-        transporter.sendMail(mailOptions, function(error, info){
-            if(error)
-                return console.log(error);
-            console.log('Message sent: ' + info.response);
-        });
+        var emailText = 'You have requested books from the Tolkien Society. To confirm this loan, please follow this link: ';
+        emailText += 'http://' + requireURL.parse(request.url).host + '/confirm/' + newUuid;
+        var mailOptions = { from: emailCreds[0],
+                            to: fields.email,
+                            subject: 'Tolkien Society book reservation',
+                            text: emailText };
+        transporter.sendMail(mailOptions, function(error, info){});
+        return;
     }
 }
 
-function serveIncorrectEmailPage(request, response, callback)
-{
-        return redirect(response, "/invalid-email.html");
-}
 
-function serveIncorrectBooking(request, response, callback)
+//TODO: Check against '[host]/confirm' with no uuid
+function serveConfirmationLink(request, response, sendResponse)
 {
-        return redirect(response, "/booking-problem.html");
+    var url = requireURL.parse(request.url);
+    var givenUUID = url.pathname.split('/')[2];
+
+    query = "SELECT Works.title AS title, Loans.member_email AS email FROM Loans, Works, Books WHERE Loans.uuid = ? AND Books.id = Loans.book_id AND Books.title_id = Works.id";
+    db.all(query, givenUUID, uuidCheckCallBack);
+
+    function uuidCheckCallBack(e, rows)
+    {
+        if (e)
+            err(e);
+        if (rows.length == 0)
+            return fail(response, NotFound);
+
+        console.log(rows);
+    
+        var emailText = rows[0].email + "has requested the following books: \n"
+        for (var i = 0; i < rows.length; i++)
+            emailText += rows[i].title + "\n";
+
+        var mailOptions = { from: emailCreds[0],
+                            to: emailCreds[0],      //This should be whatever the society's email that they actually check is
+                            subject: 'Tolkien Society book reservation',
+                            text: emailText };
+        
+        transporter.sendMail(mailOptions, function(error, info){ if (e) err(e);});
+        return redirect(response, '/loan-complete.html');
+    }
 }
 
 function createBookSearchObject(url)
@@ -456,13 +482,12 @@ function isImage(type)
 }
 
 //Pass in a querystring object
-function parseBookRequestParams(query) 
+function parseBookRequestParams(request, response, sendResponse, params) 
 {
     var fields = {email: "", books: []};
-    var params = querystring.parse(query);
-    
     if (!params.hasOwnProperty("email"))
     {
+        console.log("no email");
         serveIncorrectBooking(request, response, sendResponse);
         return null;
     }
@@ -471,6 +496,7 @@ function parseBookRequestParams(query)
         fields.email = params.email;
     else
     {
+        console.log("invalid email");
         serveIncorrectEmailPage(request, response, sendResponse);
         return null;
     }
@@ -485,6 +511,7 @@ function parseBookRequestParams(query)
 
     if (fields.books.length == 0)
     {
+        console.log("no books");
         serveIncorrectBooking(request, response, sendResponse);
         return null;
     }
