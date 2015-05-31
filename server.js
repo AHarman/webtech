@@ -208,7 +208,7 @@ function serveIncorrectBooking(request, response, sendResponse)
 function serveEmailSubmit(request, response, sendResponse)
 {
     var fields = parseBookRequestParams(request, response, sendResponse, querystring.parse(requireURL.parse(request.url).query));
-    var newUuid = uuid.v4();
+    var newUUID = uuid.v4();
 
     if (fields == null)
         return;
@@ -252,7 +252,9 @@ function serveEmailSubmit(request, response, sendResponse)
             return serveIncorrectEmailPage(request, response, sendResponse);
         var query = "INSERT INTO Loans (member_email, book_id, uuid) SELECT ? , MIN(Books.id), ? ";
         query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
-        db.run(query, [fields.email, newUuid], reservationPlacedCallback);
+        db.run(query, [fields.email, newUUID], reservationPlacedCallback);
+
+        setTimeOut(clearRequest, 1000 * 60 * 60, newUUID);      //1 hour
         return redirect(response, "/request-complete.html");
     }
 
@@ -261,7 +263,7 @@ function serveEmailSubmit(request, response, sendResponse)
         if (e)
             err(e);
         var emailText = 'You have requested books from the Tolkien Society. To confirm this loan, please follow this link: ';
-        emailText += 'http://' + requireURL.parse(request.url).host + '/confirm/' + newUuid;
+        emailText += 'http://' + requireURL.parse(request.url).host + '/confirm/' + newUUID;
         var mailOptions = { from: emailCreds[0],
                             to: fields.email,
                             subject: 'Tolkien Society book reservation',
@@ -271,8 +273,6 @@ function serveEmailSubmit(request, response, sendResponse)
     }
 }
 
-
-//TODO: Check against '[host]/confirm' with no uuid
 function serveConfirmationLink(request, response, sendResponse)
 {
     var url = requireURL.parse(request.url);
@@ -289,7 +289,7 @@ function serveConfirmationLink(request, response, sendResponse)
             return fail(response, NotFound);
 
         console.log(rows);
-    
+
         var emailText = rows[0].email + "has requested the following books: \n"
         for (var i = 0; i < rows.length; i++)
             emailText += rows[i].title + "\n";
@@ -298,8 +298,9 @@ function serveConfirmationLink(request, response, sendResponse)
                             to: emailCreds[0],      //This should be whatever the society's email that they actually check is
                             subject: 'Tolkien Society book reservation',
                             text: emailText };
-        
+
         transporter.sendMail(mailOptions, function(error, info){ if (e) err(e);});
+        db.run("UPDATE Loans SET uuid = NULL WHERE uuid = ?", givenUUID, function() {if (e) err(e);});
         return redirect(response, '/loan-complete.html');
     }
 }
@@ -516,6 +517,12 @@ function parseBookRequestParams(request, response, sendResponse, params)
         return null;
     }
     return fields;
+}
+
+
+function clearRequest(oldUUID)
+{
+    db.run("DELETE FROM Loans WHERE uuid = ?", oldUUID, function(e){if (e) err(e);});
 }
 
 // Find the content type (MIME type) to respond with.
