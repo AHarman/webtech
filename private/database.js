@@ -28,11 +28,11 @@ function startup()
     query = "CREATE TABLE IF NOT EXISTS Members (email TEXT PRIMARY KEY COLLATE NOCASE)";
     db.run(query, err);
 
-    query = "CREATE TABLE IF NOT EXISTS Loans (member_email TEXT COLLATE NOCASE, book_id INTEGER,";
-    query = query + "FOREIGN KEY(member_email) REFERENCES Members(email),";
+    query = "CREATE TABLE IF NOT EXISTS Loans (member_email TEXT COLLATE NOCASE, book_id INTEGER, uuid TEXT, ";
+    query = query + "FOREIGN KEY(member_email) REFERENCES Members(email), ";
     query = query + "FOREIGN KEY(book_id) REFERENCES Books(id))";
-    db.run(query, err);
-    
+    db.run(query, err);    
+
     db.run("INSERT INTO Authors VALUES(null, 'J. R. R. Tolkien')", err);
     db.run("INSERT INTO Authors VALUES(null, 'David Day')", err);
     db.run("INSERT INTO Authors VALUES(null, 'Unknown')", err);
@@ -103,9 +103,9 @@ function startup()
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'Sir Gawain and the Green Knight: with Pearl and Sir Orfeo'",err);
     db.run("INSERT INTO Books (id, title_id) SELECT null, Works.id FROM Works WHERE Works.title = 'A Guide To Tolkien'", err);
 
-    db.run("INSERT INTO LOANS VALUES('example@example.com', 1)", err);
-    db.run("INSERT INTO LOANS VALUES('example@example.com', 2)", err);
-    db.run("INSERT INTO LOANS VALUES('example@example.com', 10)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 1, NULL)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 2, NULL)", err);
+    db.run("INSERT INTO LOANS VALUES('example@example.com', 10, NULL)", err);
     
     db.close();
     return
