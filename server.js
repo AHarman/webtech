@@ -55,10 +55,10 @@ var types = {
 function start() {
     test();
     var httpService = http.createServer(serve);
-    httpService.listen(ports[0], 'localhost');
+    httpService.listen(ports[0]);
     var options = { key: key, cert: cert };
     var httpsService = https.createServer(options, serve);
-    httpsService.listen(ports[1], 'localhost');
+    httpsService.listen(ports[1]);
 }
 
 // Response codes: see http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
