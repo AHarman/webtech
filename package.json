@@ -6,6 +6,7 @@
   "dependencies": {
     "nodemailer": "^1.3.4",
     "sqlite3": "^3.0.8",
+    "uuid": "^2.0.1",
     "validator": "^3.40.0"
   },
   "devDependencies": {},
