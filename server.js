@@ -181,7 +181,7 @@ function serveSearchForBooks(request, response, sendResponse)
     var query = buildQuery(fields);
     
     if(query == null)
-        return redirect(response, "/booking-problem.html");
+        return serveIncorrectBooking(request, response, sendResponse);
     db.all(query.sql, query.vars, dbSearchCallBack);
 
     function dbSearchCallBack(e, rows)
@@ -197,12 +197,12 @@ function serveSearchForBooks(request, response, sendResponse)
 
 function serveIncorrectEmailPage(request, response, sendResponse)
 {
-    return redirect(response, "/booking-problem.html");
+    return redirect(response, "/invalid-email.html");
 }
 
 function serveIncorrectBooking(request, response, sendResponse)
 {
-    return fail(response, Error);
+    return redirect(response, "/booking-problem.html");
 }
 
 function serveEmailSubmit(request, response, sendResponse)
@@ -489,7 +489,7 @@ function parseBookRequestParams(request, response, sendResponse, params)
     if (!params.hasOwnProperty("email"))
     {
         console.log("no email");
-        serveIncorrectBooking(request, response, sendResponse);
+        serveIncorrectEmailPage(request, response, sendResponse);
         return null;
     }
       
