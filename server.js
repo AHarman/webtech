@@ -231,7 +231,8 @@ function serveEmailSubmit(request, response, sendResponse)
     {
         if (e)
             err(e);
-        
+        if(rows.length == 0)
+            return serveIncorrectBooking(request, response, sendResponse);
         for (var i = 0; i < rows.length; i++)
         {
             if (rows.availabe < 1)
@@ -254,7 +255,7 @@ function serveEmailSubmit(request, response, sendResponse)
         query += "FROM Books WHERE Books.id NOT IN (SELECT book_id FROM Loans)";
         db.run(query, [fields.email, newUUID], reservationPlacedCallback);
 
-        setTimeOut(clearRequest, 1000 * 60 * 60, newUUID);      //1 hour
+        setTimeout(clearRequest, 1000 * 60 * 60, newUUID);      //1 hour
         return redirect(response, "/request-complete.html");
     }
 
