@@ -3,7 +3,7 @@ University of Bristol Tolkien Society.
 
 The information contained in this website may be out of date or lacking (the library only contains a fraction of the books acutally owned by the society), please do not use this as an authoritive source.
 
-A hosted version can be found at [tolkien.alexharman.uk](tokien.alexharman.uk)
+A hosted version can be found at [tolkien.alexharman.uk](http://tolkien.alexharman.uk)
 
 To install and run this project:
 
